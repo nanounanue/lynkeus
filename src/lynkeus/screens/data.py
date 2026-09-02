@@ -90,7 +90,7 @@ class DataScreen(ShellScreen):
             label = Text(f"{schema}  ")
             label.append(f"{len(infos)} relations", style=muted)
             node = tree.root.add(
-                label, expand=len(by_schema) <= 3 or bool(self.filter_text)
+                label, expand=len(infos) <= 25 or bool(self.filter_text)
             )
             for info in infos:
                 leaf = Text(f"{clip(info.name, 22):<22} ")

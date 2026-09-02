@@ -31,7 +31,7 @@ from lynkeus.models import (
 from lynkeus.pg import MissingCredentials, PgSource
 from lynkeus.theme import FLEXOKI_DARK, FLEXOKI_LIGHT
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 __all__ = [
     "FLEXOKI_DARK",

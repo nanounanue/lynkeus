@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lynkeus"
+version = "0.0.1"
+description = "Shared Textual TUI shell for PostgreSQL-backed data projects: six standard screens over three small adapters."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+authors = [{ name = "Adolfo De Unánue" }]
+keywords = ["textual", "tui", "postgresql", "dashboard", "operations"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Database",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "textual>=6.5,<7",
+    "rich>=14",
+    "psycopg[binary]>=3.2",
+    "loguru>=0.7",
+]
+
+[project.urls]
+Repository = "https://github.com/nanounanue/lynkeus"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-textual-snapshot>=1.1",
+    "ruff>=0.6",
+    "basedpyright>=1.20",
+    "icecream>=2.1",
+    "typer>=0.12",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lynkeus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "D"]
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+
+[tool.basedpyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["src", "tests"]

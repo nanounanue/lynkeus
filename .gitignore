@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.coverage*
+.DS_Store
+
+# session-local handoff artifacts, never committed
+ai-docs/
+TODO.org
+CLAUDE.md
+GIT_REMOTE

@@ -1,18 +1,30 @@
 """The contract a project implements to get the six standard screens.
 
-Three protocols. Status and Runs are read-only queries over what already
-exists in the project's database. Actions is the one place the shell starts
-work, and it does so by running the project's own CLI or ``just`` recipe as a
-subprocess, never through a parallel code path.
+Three protocols plus a data source. Status and Runs are read-only queries over
+what already exists in the project's database. Actions is the one place the
+shell starts work, and it does so by running the project's own CLI or ``just``
+recipe as a subprocess, never through a parallel code path. ``DataSource`` is
+what the Data and Query screens read; ``lynkeus.pg.PgSource`` implements it
+and a project needs nothing beyond credentials.
 """
 
 from __future__ import annotations
 
 import subprocess
 from collections.abc import Iterator
-from typing import Protocol
+from typing import Any, Protocol
 
-from lynkeus.models import Action, Run, RunDetail, RunEvent, Status
+from lynkeus.models import (
+    Action,
+    Health,
+    QueryResult,
+    Run,
+    RunDetail,
+    RunEvent,
+    Status,
+    TableDetail,
+    TableInfo,
+)
 
 
 class StatusAdapter(Protocol):
@@ -34,11 +46,14 @@ class RunsAdapter(Protocol):
         """Return one run with its per-stage progress."""
         ...
 
-    def events(self, run_id: str) -> Iterator[RunEvent]:
+    def events(self, run_id: str) -> Iterator[RunEvent | None]:
         """Yield progress events for a run until it finishes.
 
         Implementations use ``LISTEN`` where the project emits notifications
-        and poll a progress view otherwise. The shell does not care which.
+        and poll a progress view otherwise. The shell does not care which,
+        but it must be able to stop the stream when the user selects another
+        run: yield ``None`` at least every few seconds while waiting, and
+        release the connection when the generator is closed.
         """
         ...
 
@@ -61,4 +76,28 @@ class ActionsAdapter(Protocol):
         code into the run's final state. Destructive actions are confirmed by
         the shell before this is called.
         """
+        ...
+
+
+class DataSource(Protocol):
+    """What the Data and Query screens read. ``PgSource`` is the real one."""
+
+    def health(self) -> Health:
+        """Reachability plus a short server description."""
+        ...
+
+    def query(self, sql: str, params: Any = None) -> QueryResult:
+        """Run one read-only statement and return its rows."""
+        ...
+
+    def explain(self, sql: str) -> QueryResult:
+        """``explain analyze`` of a statement, rolled back."""
+        ...
+
+    def tables(self) -> list[TableInfo]:
+        """Every user relation, with a row estimate."""
+        ...
+
+    def table_detail(self, schema: str, name: str, sample: int = 3) -> TableDetail:
+        """Columns, indexes, sizes and a few rows of one relation."""
         ...

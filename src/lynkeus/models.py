@@ -11,8 +11,10 @@ from __future__ import annotations
 import dataclasses
 import enum
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from rich.table import Table
 
@@ -21,8 +23,14 @@ def _jsonable(value: Any) -> Any:
     """Coerce dataclass fields into JSON-serialisable values."""
     if isinstance(value, enum.Enum):
         return value.value
-    if isinstance(value, datetime):
+    if isinstance(value, datetime | date):
         return value.isoformat()
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, Decimal):
+        return float(value)
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
         return {k: _jsonable(v) for k, v in dataclasses.asdict(value).items()}
     if isinstance(value, dict):
@@ -30,6 +38,11 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, list | tuple):
         return [_jsonable(v) for v in value]
     return value
+
+
+def jsonable(value: Any) -> Any:
+    """Public form of the coercion, for query rows and ad-hoc payloads."""
+    return _jsonable(value)
 
 
 class _Json:
@@ -69,11 +82,25 @@ class Health(_Json):
 
 @dataclass(frozen=True, slots=True)
 class PendingItem(_Json):
-    """One line of pending work, derived from a query, never from a flag."""
+    """One line of pending work, derived from a query, never from a flag.
+
+    ``level`` is ``info`` · ``ok`` · ``warn`` · ``error`` and picks the glyph.
+    """
 
     name: str
     detail: str = ""
     due: str = ""
+    level: str = "info"
+
+
+@dataclass(frozen=True, slots=True)
+class Gauge(_Json):
+    """A bar with a number: ``value`` of ``total`` (``total`` None = a count)."""
+
+    name: str
+    value: float
+    total: float | None = None
+    note: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,7 +133,11 @@ class Stage(_Json):
 
 @dataclass(frozen=True, slots=True)
 class RunDetail(_Json):
-    """The selected run: its row plus per-stage progress."""
+    """The selected run: its row plus per-stage progress.
+
+    ``meta`` is free-form key → value shown under the run header. The key
+    ``url`` is special: the Runs screen's ``o`` key opens it in a browser.
+    """
 
     run: Run
     stages: list[Stage] = field(default_factory=list)
@@ -145,13 +176,20 @@ class Action(_Json):
 
 @dataclass(frozen=True, slots=True)
 class Status(_Json):
-    """The Status screen: health, last runs, pending work, project extras."""
+    """The Status screen: health, last runs, pending work, project extras.
+
+    ``extra`` are plain key → value lines in the database panel; ``gauges``
+    draw as bars there (table sizes, budgets); ``series`` draw as sparklines
+    (runs per day).
+    """
 
     project: str
     database: Health
     last_runs: list[Run] = field(default_factory=list)
     pending: list[PendingItem] = field(default_factory=list)
     extra: dict[str, str] = field(default_factory=dict)
+    gauges: list[Gauge] = field(default_factory=list)
+    series: dict[str, list[float]] = field(default_factory=dict)
 
     def to_rich(self) -> Table:
         """Render the status as a Rich table for a plain terminal."""
@@ -160,13 +198,82 @@ class Status(_Json):
         table.add_column("value")
         mark = "connected" if self.database.connected else "not connected"
         table.add_row("database", f"{mark} {self.database.detail}".strip())
+        for key, value in self.extra.items():
+            table.add_row(key, value)
+        for gauge in self.gauges:
+            total = f" of {gauge.total:g}" if gauge.total is not None else ""
+            table.add_row(gauge.name, f"{gauge.value:g}{total} {gauge.note}".strip())
         for run in self.last_runs:
             table.add_row(f"run {run.run_id}", f"{run.state} · {run.name}")
         for item in self.pending:
             table.add_row(item.name, f"{item.detail} {item.due}".strip())
-        for key, value in self.extra.items():
-            table.add_row(key, value)
         return table
+
+
+@dataclass(frozen=True, slots=True)
+class QueryResult(_Json):
+    """Rows from one SQL statement, plus how long it took."""
+
+    columns: list[str]
+    rows: list[list[Any]]
+    elapsed_ms: float = 0.0
+    error: str = ""
+
+    def to_rich(self) -> Table:
+        """Render the rows as a Rich table."""
+        table = Table(caption=f"{len(self.rows)} rows · {self.elapsed_ms:.0f} ms")
+        for column in self.columns:
+            table.add_column(column)
+        for row in self.rows:
+            table.add_row(*("" if v is None else str(v) for v in row))
+        return table
+
+    def records(self) -> list[dict[str, Any]]:
+        """Rows as dicts, JSON-safe."""
+        return [
+            {c: _jsonable(v) for c, v in zip(self.columns, row, strict=True)}
+            for row in self.rows
+        ]
+
+
+@dataclass(frozen=True, slots=True)
+class TableInfo(_Json):
+    """One relation in the Data screen tree (``kind``: table · view · matview)."""
+
+    schema: str
+    name: str
+    kind: str
+    rows_estimate: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ColumnInfo(_Json):
+    """One column of a relation."""
+
+    name: str
+    type: str
+    nullable: bool = True
+    note: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class IndexInfo(_Json):
+    """One index of a relation."""
+
+    name: str
+    definition: str
+    size: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class TableDetail(_Json):
+    """Everything the Data screen shows for the selected relation."""
+
+    info: TableInfo
+    columns: list[ColumnInfo] = field(default_factory=list)
+    indexes: list[IndexInfo] = field(default_factory=list)
+    facts: dict[str, str] = field(default_factory=dict)
+    sample: QueryResult | None = None
 
 
 def runs_to_rich(runs: list[Run]) -> Table:
@@ -174,6 +281,23 @@ def runs_to_rich(runs: list[Run]) -> Table:
     table = _runs_table()
     for run in runs:
         _add_run_row(table, run)
+    return table
+
+
+def actions_to_rich(actions: list[Action]) -> Table:
+    """Render the actions palette as one Rich table."""
+    table = Table()
+    table.add_column("action")
+    table.add_column("description")
+    table.add_column("source", style="dim")
+    table.add_column("", style="red")
+    for action in actions:
+        table.add_row(
+            action.name,
+            action.description,
+            action.source.value,
+            "destructive" if action.destructive else "",
+        )
     return table
 
 

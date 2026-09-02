@@ -22,9 +22,8 @@ with it.
 
 ## Status
 
-Pre-alpha, version 0.0.1. This release holds the contract (adapters and
-models), the theme and the Postgres source. The shell itself, with its six
-screens and Pilot test helpers, is being written against its first consumer,
+Pre-alpha. The shell, its six screens, the headless command functions and the
+Pilot test helpers exist and are exercised by the first consumer,
 [triage-pg](https://github.com/ccd-ia/triage-pg). The API stays at 0.x until a
 third project consumes it; 1.0 freezes it.
 
@@ -33,71 +32,147 @@ third project consumes it; 1.0 freezes it.
 Not published on PyPI. Pin a git tag:
 
 ```bash
-uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.0.1"
+uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.1.0"
 ```
 
 Python 3.12 or newer. Runtime dependencies are Textual 6, Rich, psycopg 3 and
 loguru.
 
-## Usage
+## The shell
 
-Build a status, then render it for a terminal and for an agent:
-
-```python
-from datetime import datetime
-
-from rich.console import Console
-
-from lynkeus import Health, Run, RunState, Status
-
-status = Status(
-    project="triage-pg",
-    database=Health(connected=True, detail="pg 16"),
-    last_runs=[Run("0f3a", "chi311_v3", RunState.RUNNING, datetime(2026, 9, 2, 9, 30))],
-)
-
-print(status.to_json()["database"])
-Console().print(status.to_rich())
+```
+triage-pg  project chi311                            ● pg ok  pg 16   10:11
+1 Status  2 Runs  3 Data  4 Query  5 Actions │ 6 Experiments  7 Leaderboard  ? Help
+┌ runs ─────────────┐  run 0f3a9c21  chi311_v3  ● running 00:41:12
+│ ● 0f3a9c21 … 41m  │  ┌ artifacts ───────────────────────────────────────┐
+│ ✓ 9c21e7b4 … 2h   │  │ matrices  ━━━━━━━━━━━━━━━━━━━━━━━━━━━  12/20  ETA 6m │
+│ …                 │  └───────────────────────────────────────────────────┘
+│ / filter   7 of 37│  ┌ progress · LISTEN run_progress ──────────────────┐
+└───────────────────┘  │ 10:10:41  cache_hit   matrix  as_of=2018-10-01 … │
+ l log  k kill  o open  y copy as json
+ ? help  / filter  ^p palette  r refresh  t theme  q quit        poll 5s · v1.1.4
 ```
 
-The first line prints `{'connected': True, 'detail': 'pg 16'}`; the second
-draws a two-column table titled `triage-pg`.
+Keys `1`–`5` open the standard screens, `6`+ the project's own, `?` help.
+`/` focuses the current filter, `^p` the command palette (tabs, refresh,
+theme, and every project action), `r` refreshes, `t` flips dark/light, `q`
+quits. Each screen adds its own row of keys above the footer.
 
-A project plugs into the shell by implementing three protocols from
-`lynkeus.adapters`:
+| Screen | Reads | Keys |
+|---|---|---|
+| Status | `StatusAdapter.status()` — health, facts, gauges, last runs, a sparkline, pending work | `enter` runs · `y` copy json |
+| Runs | `RunsAdapter.list/show/events` — list, stages, live log | `l` log · `k` kill · `o` open url · `y` copy json |
+| Data | `DataSource.tables/table_detail` — catalog, sizes, columns, indexes, sample rows | `enter` more rows · `y` copy columns · `4` query this table |
+| Query | `DataSource.query/explain` — editor, results, saved queries | `^enter` run · `x` explain · `y` json · `e` csv · `s` save · `d` delete |
+| Actions | `ActionsAdapter.list/run` — palette, streamed stdout, exit code | `enter` run · `k` kill · `y` copy command |
+| Help | the keys above | `esc` |
+
+Every read runs inside a `read only` transaction that is rolled back. The
+only way the shell changes anything is Actions, which starts the project's
+own CLI or `just` recipe as a subprocess; destructive actions are confirmed
+first and the exit code becomes the run's state.
+
+## Plugging a project in
+
+```python
+from lynkeus import PgSource
+from lynkeus.app import ShellApp
+
+app = ShellApp(
+    project="triage-pg",
+    subtitle="project chi311",
+    status_adapter=MyStatus(source),
+    runs_adapter=MyRuns(source),
+    actions_adapter=MyActions(),
+    source=PgSource.from_env(),          # or PgSource(dsn=conninfo)
+    project_screens=[ExperimentsScreen(source)],
+    saved_queries={"leaderboard": "select … from triage.leaderboard"},
+    version="v1.1.4",
+)
+app.run()
+```
+
+The three protocols live in `lynkeus.adapters`:
 
 | Protocol | Feeds | Reads |
 |---|---|---|
-| `StatusAdapter` | Status screen, `<proj> status --json` | health, last runs, pending work derived from queries |
+| `StatusAdapter` | Status screen, `<proj> status --json` | health, facts, last runs, pending work derived from queries |
 | `RunsAdapter` | Runs screen, `<proj> runs list/show/tail` | the project's runs table, `LISTEN` or polling for progress |
 | `ActionsAdapter` | Actions palette, `<proj> actions list/run` | `just --dump` plus the project's CLI commands, run as subprocesses |
 
-The Data and Query screens need only `PgSource`, so they cost a project
-nothing beyond credentials.
+The Data and Query screens need only a `DataSource`; `PgSource` is one, so
+they cost a project nothing beyond credentials.
+
+A project screen subclasses `lynkeus.screens.ShellScreen`, sets `SLUG`,
+`TITLE`, `KEYS`, composes its widgets and ends with `self.keys_bar()`.
+`refresh_data()` runs on `r`, on activation and on every poll; `load(fn,
+on_done)` runs an adapter call in a thread and hands the result back on the
+UI thread. `sql_for_selection()` lets `4` open the Query screen on whatever
+the screen has selected.
+
+## Headless
+
+`lynkeus.commands` holds plain functions — `status`, `runs_list`,
+`runs_show`, `runs_tail`, `query`, `actions_list`, `actions_run` — that print
+a Rich table or, with `json_out=True`, JSON, and return the model they
+printed. A typer or argparse project wires them to its own verbs.
+
+## Testing a consumer
+
+```python
+# conftest.py
+pytest_plugins = ["lynkeus.testing"]
+
+# test_tui.py
+def test_runs(shell_snapshot):
+    assert shell_snapshot(my_app(), keys=["2"])
+```
+
+`shell_snapshot` wraps `pytest-textual-snapshot`, settles every thread worker
+before capturing, and takes `keys` to press and an async `before(pilot)`.
+`lynkeus.testing.settle`, `press` and `screenshot` drive a Pilot by hand.
+Freeze the clock (`ShellApp(clock=lambda: NOW)`) and disable polling
+(`poll_seconds=0`) for deterministic captures; `lynkeus.demo.demo_app()` is
+the reference, with fake adapters and no database:
+
+```bash
+uv run python -m lynkeus.demo          # frozen clock
+uv run python -m lynkeus.demo --live   # ticking clock, polling on
+```
 
 ## API
 
-- `lynkeus.adapters` — the three protocols above.
-- `lynkeus.models` — `Status`, `Run`, `RunDetail`, `RunEvent`, `Stage`,
-  `Action`, `PendingItem`, `Health`; each has `to_json()`, and the screen-level
-  ones have `to_rich()`.
-- `lynkeus.pg.PgSource` — `from_env()`, `rows(sql, params)`, `listen(channel)`.
+- `lynkeus.app.ShellApp` — the shell.
+- `lynkeus.adapters` — `StatusAdapter`, `RunsAdapter`, `ActionsAdapter`,
+  `DataSource`.
+- `lynkeus.models` — `Status`, `Health`, `Gauge`, `PendingItem`, `Run`,
+  `RunDetail`, `Stage`, `RunEvent`, `Action`, `QueryResult`, `TableInfo`,
+  `TableDetail`, `ColumnInfo`, `IndexInfo`; each has `to_json()`, the
+  screen-level ones `to_rich()`.
+- `lynkeus.screens` — `ShellScreen` and the six standard screens.
+- `lynkeus.commands` — the headless functions.
+- `lynkeus.pg.PgSource` — `from_env()`, `rows()`, `query()`, `explain()`,
+  `tables()`, `table_detail()`, `listen(channel, timeout)`, `health()`.
   `from_env()` raises `MissingCredentials` instead of guessing a host.
-- `lynkeus.theme` — `FLEXOKI_DARK` and `FLEXOKI_LIGHT`, Textual `Theme`
-  objects built on the Flexoki palette.
+- `lynkeus.text` — `spark`, `bar`, `age`, `elapsed`, `clip`, the state glyphs.
+- `lynkeus.theme` — `FLEXOKI_DARK` and `FLEXOKI_LIGHT`; the shell registers
+  both and `t` toggles. Widgets only ever name theme variables.
+- `lynkeus.testing` — `settle`, `press`, `screenshot`, the `shell_snapshot`
+  fixture.
 
 ## Configuration
 
 Credentials are read from the environment only: `DATABASE_URL`, or
 `PGDATABASE` and `PGHOST` with `PGUSER` and `PGPASSWORD`. In this workspace
 direnv loads them from the project's `.envrc`. There is no default host and no
-prompt.
+prompt. A project that resolves its database another way passes the libpq
+conninfo it already has to `PgSource(dsn=...)`.
 
 ## Development
 
 ```bash
 just sync        # uv sync, all groups
-just test        # uv run pytest
+just test        # uv run pytest   (add --snapshot-update after a deliberate change)
 just lint        # uv run ruff check
 just fmt         # uv run ruff format
 just typecheck   # uv run basedpyright
@@ -108,8 +183,8 @@ just check       # lint, typecheck, test
 
 - Business logic. The shell reads adapters and runs the project's CLI; it
   decides nothing about cohorts, scenarios or corpora.
-- Visualisation beyond sparklines and one plotext chart per screen. Maps,
-  surfaces and networks open in the project's existing web console.
+- Visualisation beyond sparklines and bars. Maps, surfaces and networks open
+  in the project's existing web console.
 - A CLI framework. The command functions are plain callables so that typer and
   argparse projects wire them the same way.
 - Authentication. A served shell sits behind a reverse proxy.
@@ -118,11 +193,18 @@ just check       # lint, typecheck, test
 
 ```
 src/lynkeus/
-  adapters.py   the three protocols
+  app.py        ShellApp: header, tabs, switcher, footer, keys, palette
+  adapters.py   the three protocols and DataSource
   models.py     dataclasses with to_json and to_rich
-  pg.py         PgSource and the credential guard
+  screens/      status, runs, data, query, actions, help + the ShellScreen base
+  widgets.py    header, tab bar, key bars, footer, Panel, confirm/prompt dialogs
+  commands.py   the headless functions behind --json
+  pg.py         PgSource: credential guard, read-only queries, catalog, LISTEN
+  text.py       sparklines, bars, ages, glyphs
   theme.py      Flexoki dark and light
-tests/
+  testing.py    Pilot helpers and the snapshot fixture
+  demo.py       fake adapters; python -m lynkeus.demo
+tests/          one snapshot per screen, the commands, the text helpers
 docs/adr/       decisions, starting with why this is a package
 ```
 

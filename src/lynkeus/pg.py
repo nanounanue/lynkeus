@@ -142,13 +142,13 @@ class PgSource:
             return Health(connected=False, detail=str(exc).strip().splitlines()[0])
         return Health(connected=True, detail=f"pg {version}")
 
-    def query(self, sql_text: str, params: Any = None) -> QueryResult:
+    def query(self, statement: str, params: Any = None) -> QueryResult:
         """Run one read-only statement; errors come back in ``QueryResult.error``."""
         started = time.perf_counter()
         try:
             with self.connect() as conn, conn.cursor() as cur:
                 cur.execute("set transaction read only")
-                cur.execute(sql_text, params)  # type: ignore[arg-type]
+                cur.execute(statement, params)  # type: ignore[arg-type]
                 columns = [d.name for d in cur.description] if cur.description else []
                 rows = [list(r.values()) for r in cur.fetchall()] if columns else []
                 conn.rollback()
@@ -157,9 +157,9 @@ class PgSource:
             return QueryResult([], [], elapsed, str(exc).strip())
         return QueryResult(columns, rows, (time.perf_counter() - started) * 1000)
 
-    def explain(self, sql_text: str) -> QueryResult:
+    def explain(self, statement: str) -> QueryResult:
         """``explain (analyze, buffers)`` of one statement, rolled back."""
-        return self.query("explain (analyze, buffers) " + sql_text)
+        return self.query("explain (analyze, buffers) " + statement)
 
     def tables(self) -> list[TableInfo]:
         """Every user relation with its kind and a planner row estimate."""

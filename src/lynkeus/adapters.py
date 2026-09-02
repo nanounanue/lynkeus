@@ -86,11 +86,11 @@ class DataSource(Protocol):
         """Reachability plus a short server description."""
         ...
 
-    def query(self, sql: str, params: Any = None) -> QueryResult:
+    def query(self, statement: str, params: Any = None) -> QueryResult:
         """Run one read-only statement and return its rows."""
         ...
 
-    def explain(self, sql: str) -> QueryResult:
+    def explain(self, statement: str) -> QueryResult:
         """``explain analyze`` of a statement, rolled back."""
         ...
 

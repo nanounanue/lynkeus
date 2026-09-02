@@ -270,9 +270,9 @@ class DemoSource:
         """Always up."""
         return Health(True, "pg 16")
 
-    def query(self, sql: str, params: Any = None) -> QueryResult:
+    def query(self, statement: str, params: Any = None) -> QueryResult:
         """Any statement returns the leaderboard; an ``explain`` returns a plan."""
-        if sql.lstrip().lower().startswith("explain"):
+        if statement.lstrip().lower().startswith("explain"):
             return QueryResult(
                 ["QUERY PLAN"],
                 [
@@ -281,13 +281,13 @@ class DemoSource:
                 ],
                 3.0,
             )
-        if "error" in sql.lower():
+        if "error" in statement.lower():
             return QueryResult([], [], 1.0, 'relation "nope" does not exist')
         return LEADERBOARD
 
-    def explain(self, sql: str) -> QueryResult:
+    def explain(self, statement: str) -> QueryResult:
         """A plan."""
-        return self.query("explain " + sql)
+        return self.query("explain " + statement)
 
     def tables(self) -> list[TableInfo]:
         """The design's catalog."""

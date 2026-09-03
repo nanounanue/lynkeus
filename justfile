@@ -42,13 +42,17 @@ _compose *ARGS:
 lint:
     uv run ruff check
 
-# Format with ruff
+# Format with ruff (Python, and the Python blocks inside Markdown)
 fmt:
     uv run ruff format
+
+# Fail if anything is unformatted — the same gate CI applies
+fmt-check:
+    uv run ruff format --check
 
 # Type-check with basedpyright
 typecheck:
     uv run basedpyright
 
 # Lint, type-check and test
-check: lint typecheck test
+check: lint fmt-check typecheck test

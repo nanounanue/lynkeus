@@ -84,7 +84,7 @@ app = ShellApp(
     status_adapter=MyStatus(source),
     runs_adapter=MyRuns(source),
     actions_adapter=MyActions(),
-    source=PgSource.from_env(),          # or PgSource(dsn=conninfo)
+    source=PgSource.from_env(),  # or PgSource(dsn=conninfo)
     project_screens=[ExperimentsScreen(source)],
     saved_queries={"leaderboard": "select … from triage.leaderboard"},
     version="v1.1.4",
@@ -122,6 +122,7 @@ printed. A typer or argparse project wires them to its own verbs.
 ```python
 # conftest.py
 pytest_plugins = ["lynkeus.testing"]
+
 
 # test_tui.py
 def test_runs(shell_snapshot):

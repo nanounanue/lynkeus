@@ -1,0 +1,101 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Consumers pin lynkeus by tag, so a break here surfaces in four repos at
+  # once. The fast tier fans out across the CPython minors `requires-python`
+  # claims; lint and the type check run on one leg so the thresholds are not
+  # duplicated four times.
+  fast:
+    name: fast tests (py ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - run: uv sync --all-groups
+      - name: pytest (no database)
+        run: uv run pytest -m "not integration"
+      - name: ruff
+        if: matrix.python == '3.12'
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+      - name: basedpyright
+        if: matrix.python == '3.12'
+        run: uv run basedpyright
+
+  # The catalogue queries behind the Data screen, the read-only guarantee
+  # behind Query and LISTEN behind the Runs progress log only mean anything
+  # against a real server, and they are version-sensitive: pg_stat_user_tables
+  # and reltuples have both changed shape across releases.
+  integration:
+    name: integration (PostgreSQL ${{ matrix.postgres }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ["14", "16", "17"]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: lynkeus
+          POSTGRES_PASSWORD: lynkeus
+          POSTGRES_DB: lynkeus_test
+        ports:
+          - 11401:5432
+        options: >-
+          --health-cmd "pg_isready -U lynkeus -d lynkeus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      LYNKEUS_TEST_DSN: postgresql://lynkeus:lynkeus@127.0.0.1:11401/lynkeus_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync --all-groups
+      # -p no:randomly is not needed; the fixture builds and drops its own
+      # uniquely named schema per test, so the tier is order-independent.
+      - name: pytest (integration)
+        run: uv run pytest -m integration
+
+  # A consumer installs lynkeus from a git tag, so the wheel has to build and
+  # carry py.typed; `uv sync` on a checkout would not catch a packaging slip.
+  package:
+    name: packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv build
+      - run: uvx twine check dist/*
+      - name: the wheel ships py.typed and the screens package
+        run: |
+          python -m zipfile -l dist/*.whl | tee /tmp/wheel.txt
+          grep -q 'lynkeus/py.typed' /tmp/wheel.txt
+          grep -q 'lynkeus/screens/' /tmp/wheel.txt

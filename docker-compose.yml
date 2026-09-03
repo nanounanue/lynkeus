@@ -1,0 +1,22 @@
+# A disposable PostgreSQL for the integration tier. It holds nothing worth
+# keeping: `just db-up` creates it, the tests build their own schema inside it,
+# and `just db-down` removes it with its volume. Port 11401 is lynkeus's slot
+# in ~/projects/PORTS.md (block 11400, pg = base + 1), overridable so a second
+# checkout can run its own.
+services:
+  postgres:
+    image: postgres:16
+    container_name: lynkeus-test-postgres
+    environment:
+      POSTGRES_USER: lynkeus
+      POSTGRES_PASSWORD: lynkeus
+      POSTGRES_DB: lynkeus_test
+    ports:
+      - "127.0.0.1:${LYNKEUS_PG_PORT:-11401}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lynkeus -d lynkeus_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

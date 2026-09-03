@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import time
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -225,7 +225,7 @@ class PgSource:
 
     def listen(
         self, channel: str, timeout: float | None = None
-    ) -> Iterator[str | None]:
+    ) -> Generator[str | None, None, None]:
         """Yield notification payloads from ``LISTEN channel`` until closed.
 
         With a ``timeout`` (seconds) the generator yields ``None`` whenever

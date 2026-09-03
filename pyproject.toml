@@ -48,6 +48,9 @@ packages = ["src/lynkeus"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "integration: needs a real PostgreSQL (see `just db-up`); skipped without one",
+]
 
 [tool.ruff]
 line-length = 88

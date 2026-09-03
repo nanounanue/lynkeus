@@ -172,12 +172,34 @@ conninfo it already has to `PgSource(dsn=...)`.
 
 ```bash
 just sync        # uv sync, all groups
-just test        # uv run pytest   (add --snapshot-update after a deliberate change)
+just test        # pytest, the database-free tier
 just lint        # uv run ruff check
 just fmt         # uv run ruff format
 just typecheck   # uv run basedpyright
 just check       # lint, typecheck, test
 ```
+
+Snapshot tests back every screen; after a deliberate visual change run
+`uv run pytest --snapshot-update` and read the diff before committing it.
+
+The tests come in two tiers. The default tier needs no database: it drives the
+shell through Pilot against the fake adapters in `lynkeus.demo`. The
+`integration` tier runs the SQL in `PgSource` against a real server, because
+the catalogue queries behind the Data screen, the read-only guarantee behind
+Query and `LISTEN` behind the Runs progress log cannot be verified any other
+way.
+
+```bash
+just db-up       # a disposable PostgreSQL on 127.0.0.1:11401, data in tmpfs
+just test-all    # both tiers
+just db-down     # remove it and its data
+```
+
+The integration tier skips itself when no server answers, so `just test` and
+`just check` stay useful with nothing running. Point `LYNKEUS_TEST_DSN` at
+another server to use one; each test builds and drops its own uniquely named
+schema and touches nothing else. CI runs the fast tier on Python 3.12 and
+3.13 and the integration tier on PostgreSQL 14, 16 and 17.
 
 ## Non-goals
 

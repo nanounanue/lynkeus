@@ -9,8 +9,17 @@ dist/
 .coverage*
 .DS_Store
 
-# session-local handoff artifacts, never committed
+# Session-local hand-off artifacts (session-closer). Never staged, never
+# force-added. NOTE: docs/ is deliberately NOT listed — here docs/ is committed
+# project content (docs/adr/ holds the decision records), so ignoring it would
+# hide a new ADR from `git status`. ai-docs/ is the Claude-generated counterpart.
 ai-docs/
 TODO.org
 CLAUDE.md
 GIT_REMOTE
+working-outline.md
+.project
+handoff-trace.log
+README.org
+COMPACT.md
+COMPACT-archive-*.md

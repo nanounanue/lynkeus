@@ -37,7 +37,7 @@ the same picture. `Action` gained `args`, which is additive.
 Not published on PyPI. Pin a git tag:
 
 ```bash
-uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.2.0"
+uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.2.1"
 ```
 
 Python 3.12 or newer. Runtime dependencies are Textual 6, Rich, psycopg 3 and

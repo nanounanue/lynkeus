@@ -163,3 +163,20 @@ async def test_a_quiet_sparkline_says_so_instead_of_drawing_a_flat_line() -> Non
         panel = str(status_screen.query_one("#status-runs").render())
         assert "none in 14 d" in panel
         assert "▁▁▁" not in panel
+
+
+async def test_a_modal_dims_its_context_instead_of_replacing_it() -> None:
+    """The app's `Screen` rule paints every screen opaque, modals included.
+
+    A prompt that blanks the cockpit behind it loses the row the user was
+    acting on, and a screenshot of one shows a dialog in a void.
+    """
+    app = demo_app()
+    async with app.run_test(size=(110, 34)) as pilot:
+        await settle(pilot)
+        await pilot.press("5", "down", "enter")
+        await settle(pilot)
+        assert isinstance(app.screen, PromptScreen)
+        assert app.screen.styles.background.a < 1.0, (
+            "the modal is opaque, so the screen it was opened from is hidden"
+        )

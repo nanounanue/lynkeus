@@ -95,6 +95,11 @@ class ShellApp(App[None]):
     ]
     CSS = """
     Screen { layout: vertical; background: $background; color: $foreground; }
+    /* ...but a modal must dim the screen it was opened from, not replace it:
+       the rule above would otherwise paint it opaque, and the prompt for an
+       action's arguments would hide the very row being acted on. This lives
+       here, not in the widgets' DEFAULT_CSS, because App.CSS outranks it. */
+    ConfirmScreen, PromptScreen { background: $background 60%; }
     #shell-body { height: 1fr; }
     DataTable { background: transparent; }
     DataTable > .datatable--header { background: transparent; color: $text-muted; }

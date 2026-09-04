@@ -9,6 +9,15 @@ screen renders, ``lynkeus.app.ShellApp`` for the shell and
 
 from __future__ import annotations
 
+from lynkeus.actions import (
+    SubprocessActions,
+    argparse_actions,
+    destructive_by_words,
+    just_actions,
+    parse_just_dump,
+    recipe_args,
+    typer_actions,
+)
 from lynkeus.adapters import ActionsAdapter, DataSource, RunsAdapter, StatusAdapter
 from lynkeus.models import (
     Action,
@@ -35,6 +44,7 @@ from lynkeus.theme import FLEXOKI_DARK, FLEXOKI_LIGHT
 __version__ = "0.2.1"
 
 __all__ = [
+    "SubprocessActions",
     "FLEXOKI_DARK",
     "FLEXOKI_LIGHT",
     "Action",
@@ -60,6 +70,12 @@ __all__ = [
     "StatusAdapter",
     "TableDetail",
     "TableInfo",
+    "argparse_actions",
+    "destructive_by_words",
+    "just_actions",
+    "parse_just_dump",
+    "recipe_args",
+    "typer_actions",
     "__version__",
 ]
 

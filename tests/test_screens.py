@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from textual.widgets import Input, RichLog, TextArea
+from textual.screen import ModalScreen
+from textual.widgets import Input, RichLog, Static, TextArea
 
 from lynkeus.demo import demo_app
 from lynkeus.models import Series, Status
@@ -40,6 +41,16 @@ def test_query_screen(shell_snapshot) -> None:
 
 def test_actions_screen(shell_snapshot) -> None:
     assert shell_snapshot(demo_app(), keys=["5"])
+
+
+def test_actions_prompt_over_the_palette(shell_snapshot) -> None:
+    """The one snapshot that opens a modal.
+
+    The other eight would have photographed the opaque prompt of v0.2.0 without
+    noticing, since none of them opens one; this is the picture that shows the
+    palette still readable underneath.
+    """
+    assert shell_snapshot(demo_app(), keys=["5", "down", "enter"])
 
 
 def test_help_screen(shell_snapshot) -> None:
@@ -179,4 +190,27 @@ async def test_a_modal_dims_its_context_instead_of_replacing_it() -> None:
         assert isinstance(app.screen, PromptScreen)
         assert app.screen.styles.background.a < 1.0, (
             "the modal is opaque, so the screen it was opened from is hidden"
+        )
+
+
+async def test_a_project_modal_dims_too() -> None:
+    """The rule has to name `ModalScreen`, not the shell's own two modals.
+
+    A project gets its screens from `project_screens` and may push a modal of
+    its own — a review queue asking which ruling to file. Naming
+    `ConfirmScreen, PromptScreen` would leave that one opaque, which is the
+    same bug again in the first repo that writes one.
+    """
+
+    class ProjectModal(ModalScreen[None]):
+        def compose(self):
+            yield Static("file this ruling?")
+
+    app = demo_app()
+    async with app.run_test(size=(110, 34)) as pilot:
+        await settle(pilot)
+        app.push_screen(ProjectModal())
+        await settle(pilot)
+        assert app.screen.styles.background.a < 1.0, (
+            "a project's own modal is opaque, so only the shell's two dim"
         )

@@ -98,8 +98,10 @@ class ShellApp(App[None]):
     /* ...but a modal must dim the screen it was opened from, not replace it:
        the rule above would otherwise paint it opaque, and the prompt for an
        action's arguments would hide the very row being acted on. This lives
-       here, not in the widgets' DEFAULT_CSS, because App.CSS outranks it. */
-    ConfirmScreen, PromptScreen { background: $background 60%; }
+       here, not in the widgets' DEFAULT_CSS, because App.CSS outranks it, and
+       it names `ModalScreen` rather than this shell's own two, so a modal a
+       project defines is dimmed by the same rule. */
+    ModalScreen { background: $background 60%; }
     #shell-body { height: 1fr; }
     DataTable { background: transparent; }
     DataTable > .datatable--header { background: transparent; color: $text-muted; }

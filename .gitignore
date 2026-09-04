@@ -26,3 +26,7 @@ COMPACT-archive-*.md
 
 # pytest-textual-snapshot writes this next to the tests on a mismatch
 snapshot_report.html
+
+# Claude Code's hooks write here (tool-use traces, notifications). Session
+# artifacts of the machine, not of the package.
+logs/

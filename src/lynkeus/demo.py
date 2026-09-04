@@ -31,6 +31,7 @@ from lynkeus.models import (
     RunDetail,
     RunEvent,
     RunState,
+    Series,
     Stage,
     Status,
     TableDetail,
@@ -170,7 +171,13 @@ class DemoStatus:
                 Gauge("models", 240),
                 Gauge("runs", 37),
             ],
-            series={"runs per day": [1, 2, 3, 5, 2, 6, 7, 5, 3, 6, 8, 5, 2, 3]},
+            series=[
+                Series(
+                    "runs per day",
+                    [1, 2, 3, 5, 2, 6, 7, 5, 3, 6, 8, 5, 2, 3],
+                    "none in 14 d",
+                )
+            ],
         )
 
 
@@ -228,9 +235,15 @@ class DemoActions:
     """A palette from a justfile and a CLI."""
 
     def list(self) -> list[Action]:
-        """Seven actions, one destructive."""
+        """Eight actions: one destructive, one that must be given a config."""
         return [
             Action("just test", "run the test suite · ~2 min", ActionSource.JUST),
+            Action(
+                "triage run",
+                "train and evaluate an experiment",
+                ActionSource.CLI,
+                args="CONFIG",
+            ),
             Action("just lint", "ruff check + format --check", ActionSource.JUST),
             Action(
                 "triage analyze-config",
@@ -256,7 +269,7 @@ class DemoActions:
         """Echo a few lines instead of doing anything."""
         script = 'for i in 1 2 3; do echo "$0 step $i"; done; echo done'
         return subprocess.Popen(
-            ["sh", "-c", script, name],
+            ["sh", "-c", script, " ".join([name, *args])],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

@@ -27,12 +27,17 @@ Pilot test helpers exist and are exercised by the first consumer,
 [triage-pg](https://github.com/ccd-ia/triage-pg). The API stays at 0.x until a
 third project consumes it; 1.0 freezes it.
 
+**0.2.0 breaks one model.** `Status.series` is a `list[Series]`, not a
+`dict[str, list[float]]`: a series now carries the wording for the case where
+there is nothing to draw, because a line of zeros and a flat constant line are
+the same picture. `Action` gained `args`, which is additive.
+
 ## Install
 
 Not published on PyPI. Pin a git tag:
 
 ```bash
-uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.1.0"
+uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.2.0"
 ```
 
 Python 3.12 or newer. Runtime dependencies are Textual 6, Rich, psycopg 3 and
@@ -64,13 +69,15 @@ quits. Each screen adds its own row of keys above the footer.
 | Runs | `RunsAdapter.list/show/events` — list, stages, live log | `l` log · `k` kill · `o` open url · `y` copy json |
 | Data | `DataSource.tables/table_detail` — catalog, sizes, columns, indexes, sample rows | `enter` more rows · `y` copy columns · `4` query this table |
 | Query | `DataSource.query/explain` — editor, results, saved queries | `^enter` run · `x` explain · `y` json · `e` csv · `s` save · `d` delete |
-| Actions | `ActionsAdapter.list/run` — palette, streamed stdout, exit code | `enter` run · `k` kill · `y` copy command |
+| Actions | `ActionsAdapter.list/run` — palette, streamed stdout, exit code | `enter` run (prompts when the action declares `args`) · `k` kill · `y` copy command |
 | Help | the keys above | `esc` |
 
 Every read runs inside a `read only` transaction that is rolled back. The
 only way the shell changes anything is Actions, which starts the project's
 own CLI or `just` recipe as a subprocess; destructive actions are confirmed
-first and the exit code becomes the run's state.
+first and the exit code becomes the run's state. An action carrying an `args`
+hint (`Action("triage run", …, args="CONFIG")`) is prompted for them before it
+starts — running such a verb bare would only print its usage and exit 2.
 
 ## Plugging a project in
 
@@ -146,10 +153,10 @@ uv run python -m lynkeus.demo --live   # ticking clock, polling on
 - `lynkeus.app.ShellApp` — the shell.
 - `lynkeus.adapters` — `StatusAdapter`, `RunsAdapter`, `ActionsAdapter`,
   `DataSource`.
-- `lynkeus.models` — `Status`, `Health`, `Gauge`, `PendingItem`, `Run`,
-  `RunDetail`, `Stage`, `RunEvent`, `Action`, `QueryResult`, `TableInfo`,
-  `TableDetail`, `ColumnInfo`, `IndexInfo`; each has `to_json()`, the
-  screen-level ones `to_rich()`.
+- `lynkeus.models` — `Status`, `Health`, `Gauge`, `Series`, `PendingItem`,
+  `Run`, `RunDetail`, `Stage`, `RunEvent`, `Action`, `QueryResult`,
+  `TableInfo`, `TableDetail`, `ColumnInfo`, `IndexInfo`; each has `to_json()`,
+  the screen-level ones `to_rich()`.
 - `lynkeus.screens` — `ShellScreen` and the six standard screens.
 - `lynkeus.commands` — the headless functions.
 - `lynkeus.pg.PgSource` — `from_env()`, `rows()`, `query()`, `explain()`,

@@ -2,11 +2,14 @@
 
 The shell never runs project code in-process: ``ActionsAdapter.run`` starts a
 subprocess, this screen streams its stdout and turns the exit code into the
-final state. Destructive actions are confirmed first.
+final state. Destructive actions are confirmed first, and an action that
+declares ``args`` is prompted for them — running ``triage run`` with none
+would only print its usage and exit 2.
 """
 
 from __future__ import annotations
 
+import shlex
 import subprocess
 from datetime import datetime
 
@@ -19,7 +22,7 @@ from textual.widgets import DataTable, Input, RichLog, Static
 from lynkeus.models import Action
 from lynkeus.screens import ShellScreen
 from lynkeus.text import clip, elapsed
-from lynkeus.widgets import ConfirmScreen, Panel, colour
+from lynkeus.widgets import ConfirmScreen, Panel, PromptScreen, colour
 
 
 class ActionsScreen(ShellScreen):
@@ -107,9 +110,10 @@ class ActionsScreen(ShellScreen):
             name = Text(clip(action.name, 22))
             if action.destructive:
                 name.stylize(colour(self.app, "error"))
-            description = Text(
-                clip(action.description, 30), style=colour(self.app, "text-muted")
-            )
+            text = action.description
+            if action.args:
+                text = f"{action.args} · {text}" if text else action.args
+            description = Text(clip(text, 30), style=colour(self.app, "text-muted"))
             source = Text(action.source.value, style=colour(self.app, "secondary"))
             table.add_row(name, description, source, key=str(index))
             shown += 1
@@ -155,10 +159,36 @@ class ActionsScreen(ShellScreen):
                 ConfirmScreen(
                     f"Run {action.name}?", "marked destructive by the project"
                 ),
-                lambda yes: self.start(action) if yes else None,
+                lambda yes: self.ask_args(action) if yes else None,
             )
         else:
+            self.ask_args(action)
+
+    def ask_args(self, action: Action) -> None:
+        """Prompt for the arguments the action needs, then start it.
+
+        An empty answer, like escape, cancels: an action that declares
+        ``args`` cannot run without them, so there is nothing to start.
+        """
+        if not action.args:
             self.start(action)
+            return
+        self.app.push_screen(
+            PromptScreen(f"{action.name} {action.args}", action.args),
+            lambda text: self.start_with(action, text),
+        )
+
+    def start_with(self, action: Action, text: str | None) -> None:
+        """Split the prompt's answer the way a shell would, then start."""
+        if not text:
+            self.app.notify(f"{action.name} needs {action.args}", timeout=3)
+            return
+        try:
+            args = shlex.split(text)
+        except ValueError as exc:  # unbalanced quote — shown, not swallowed
+            self.report_error("arguments", exc)
+            return
+        self.start(action, args)
 
     def start(self, action: Action, args: list[str] | None = None) -> None:
         """Start ``action`` and stream its output."""
@@ -226,5 +256,8 @@ class ActionsScreen(ShellScreen):
     def action_copy(self) -> None:
         """Copy the selected action's command line."""
         if self.selected is not None:
-            self.app.copy_to_clipboard(self.selected.name)
+            command = self.selected.name
+            if self.selected.args:
+                command = f"{command} {self.selected.args}"
+            self.app.copy_to_clipboard(command)
             self.app.notify("copied command", timeout=2)

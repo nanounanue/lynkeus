@@ -260,6 +260,29 @@ class ShellApp(App[None]):
         actions.selected = action
         actions.action_run_selected()
 
+    def start_action_named(self, name: str) -> bool:
+        """Start the action called ``name``, from the adapter's own list.
+
+        For a project screen that knows a command but not the ``Action``
+        describing it — acervo's Pending screen offers the verb that clears
+        each row. Resolving through the palette's list rather than building an
+        ``Action`` here is what keeps the destructive flag and the argument
+        hint attached: a reconstructed action would run ``db downgrade``
+        without the confirmation the real one carries.
+
+        Returns False, and says so, when no such action exists.
+        """
+        for action in self.actions_cache:
+            if action.name == name:
+                self.start_action(action)
+                return True
+        self.notify(
+            f"no action named {name!r} — the palette lists what there is",
+            severity="warning",
+            timeout=5,
+        )
+        return False
+
     # --------------------------------------------------------------- actions
     def action_tab(self, number: int) -> None:
         """Switch to the tab numbered ``number``."""

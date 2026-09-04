@@ -13,6 +13,7 @@ from lynkeus import (
     Run,
     RunDetail,
     RunState,
+    Series,
     Stage,
     Status,
 )
@@ -62,3 +63,36 @@ def test_action_to_json_uses_enum_values() -> None:
 
     assert action.to_json()["source"] == "just"
     assert action.to_json()["destructive"] is False
+
+
+def test_action_args_default_to_none_needed() -> None:
+    action = Action("just test", "the suite", ActionSource.JUST)
+
+    assert action.args == ""
+    assert action.to_json()["args"] == ""
+
+
+def test_a_series_of_zeros_is_empty_and_says_so() -> None:
+    quiet = Series("runs per day", [0.0] * 14, "none in 14 d")
+    busy = Series("runs per day", [0, 0, 3], "none in 14 d")
+
+    assert quiet.empty
+    assert quiet.summary() == "none in 14 d"
+    assert not busy.empty
+    assert busy.summary() == "3 points · last 3"
+
+
+def test_an_empty_series_falls_back_to_none() -> None:
+    assert Series("runs per day", []).summary() == "none"
+
+
+def test_status_to_rich_prints_the_empty_note_not_a_flat_line() -> None:
+    status = Status(
+        project="triage-pg",
+        database=Health(connected=True, detail="pg 16"),
+        series=[Series("runs per day", [0.0] * 14, "none in 14 d")],
+    )
+    console = Console(record=True, width=80)
+    console.print(status.to_rich())
+
+    assert "none in 14 d" in console.export_text()

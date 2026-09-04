@@ -72,9 +72,20 @@ class StatusScreen(ShellScreen):
         dot = (
             "[$success]●[/] connected" if db.connected else "[$error]●[/] not connected"
         )
-        lines = [f"[$text-muted]connection[/]   {dot} [$text-muted]{db.detail}[/]"]
+        # One label column for the whole panel, wide enough for the widest
+        # thing in it. A constant was fitted to the first consumer's names and
+        # a project whose gauges are table names (acervo's
+        # ``document_note_items``) runs its bar straight into the label.
+        width = max(
+            [len("connection")]
+            + [len(k) for k in status.extra]
+            + [len(g.name) for g in status.gauges]
+        )
+        lines = [
+            f"[$text-muted]{'connection':<{width}}[/] {dot} [$text-muted]{db.detail}[/]"
+        ]
         for key, value in status.extra.items():
-            lines.append(f"[$text-muted]{key:<12}[/] {value}")
+            lines.append(f"[$text-muted]{key:<{width}}[/] {value}")
         if status.gauges:
             lines.append("")
             top = max((g.value for g in status.gauges), default=0) or 1
@@ -86,7 +97,7 @@ class StatusScreen(ShellScreen):
                     amount += f" of {count(gauge.total)}"
                 note = f" [$text-muted]{gauge.note}[/]" if gauge.note else ""
                 lines.append(
-                    f"[$text-muted]{gauge.name:<12}[/] [$primary]{filled}[/]"
+                    f"[$text-muted]{gauge.name:<{width}}[/] [$primary]{filled}[/]"
                     f"[$border]{rest}[/] {amount}{note}"
                 )
         return "\n".join(lines)
@@ -101,9 +112,15 @@ class StatusScreen(ShellScreen):
             lines.append(f"{glyph} {run.name:<22}{detail}  [$text-muted]{when}[/]")
         if not lines:
             lines.append("[$text-muted]no runs yet[/]")
-        for name, values in status.series.items():
+        for series in status.series:
             lines.append("")
-            lines.append(f"[$text-muted]{name}[/]  [$primary]{spark(values, 40)}[/]")
+            # A flat line of zeros reads as data; the project's own note does not.
+            drawn = (
+                f"[$text-muted]{series.summary()}[/]"
+                if series.empty
+                else f"[$primary]{spark(series.values, 40)}[/]"
+            )
+            lines.append(f"[$text-muted]{series.name}[/]  {drawn}")
         return "\n".join(lines)
 
     def _pending(self, status: Status) -> str:

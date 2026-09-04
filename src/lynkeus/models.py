@@ -166,12 +166,45 @@ class RunEvent(_Json):
 
 @dataclass(frozen=True, slots=True)
 class Action(_Json):
-    """One entry of the Actions palette."""
+    """One entry of the Actions palette.
+
+    ``args`` is the usage hint for arguments the action cannot run without
+    (``"CONFIG"``, ``"MODEL_ID AS_OF_DATE"``). A non-empty hint makes the
+    shell prompt for them before starting the subprocess; leave it empty for
+    an action that runs bare, whatever optional flags it also accepts.
+    """
 
     name: str
     description: str
     source: ActionSource
     destructive: bool = False
+    args: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Series(_Json):
+    """One sparkline: the values, and what to say when there is nothing to draw.
+
+    All-zero values draw as a flat line indistinguishable from a constant
+    one — honest but mute. ``empty_note`` is the project's own wording for
+    that case, in its own units: ``Series("runs per day", counts, "none in
+    14 d")``. The screens print the note instead of the flat line.
+    """
+
+    name: str
+    values: list[float] = field(default_factory=list)
+    empty_note: str = ""
+
+    @property
+    def empty(self) -> bool:
+        """True when there is nothing to draw: no values, or every one zero."""
+        return not any(self.values)
+
+    def summary(self) -> str:
+        """One line for a plain terminal, which has no sparkline."""
+        if self.empty:
+            return self.empty_note or "none"
+        return f"{len(self.values)} points · last {self.values[-1]:g}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,7 +213,7 @@ class Status(_Json):
 
     ``extra`` are plain key → value lines in the database panel; ``gauges``
     draw as bars there (table sizes, budgets); ``series`` draw as sparklines
-    (runs per day).
+    (runs per day), in the order given.
     """
 
     project: str
@@ -189,7 +222,7 @@ class Status(_Json):
     pending: list[PendingItem] = field(default_factory=list)
     extra: dict[str, str] = field(default_factory=dict)
     gauges: list[Gauge] = field(default_factory=list)
-    series: dict[str, list[float]] = field(default_factory=dict)
+    series: list[Series] = field(default_factory=list)
 
     def to_rich(self) -> Table:
         """Render the status as a Rich table for a plain terminal."""
@@ -203,6 +236,8 @@ class Status(_Json):
         for gauge in self.gauges:
             total = f" of {gauge.total:g}" if gauge.total is not None else ""
             table.add_row(gauge.name, f"{gauge.value:g}{total} {gauge.note}".strip())
+        for series in self.series:
+            table.add_row(series.name, series.summary())
         for run in self.last_runs:
             table.add_row(f"run {run.run_id}", f"{run.state} · {run.name}")
         for item in self.pending:
@@ -288,12 +323,14 @@ def actions_to_rich(actions: list[Action]) -> Table:
     """Render the actions palette as one Rich table."""
     table = Table()
     table.add_column("action")
+    table.add_column("args", style="dim")
     table.add_column("description")
     table.add_column("source", style="dim")
     table.add_column("", style="red")
     for action in actions:
         table.add_row(
             action.name,
+            action.args,
             action.description,
             action.source.value,
             "destructive" if action.destructive else "",

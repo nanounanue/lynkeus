@@ -23,3 +23,6 @@ handoff-trace.log
 README.org
 COMPACT.md
 COMPACT-archive-*.md
+
+# pytest-textual-snapshot writes this next to the tests on a mismatch
+snapshot_report.html

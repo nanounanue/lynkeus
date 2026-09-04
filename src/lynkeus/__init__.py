@@ -23,6 +23,7 @@ from lynkeus.models import (
     RunDetail,
     RunEvent,
     RunState,
+    Series,
     Stage,
     Status,
     TableDetail,
@@ -31,7 +32,7 @@ from lynkeus.models import (
 from lynkeus.pg import MissingCredentials, PgSource
 from lynkeus.theme import FLEXOKI_DARK, FLEXOKI_LIGHT
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "FLEXOKI_DARK",
@@ -53,6 +54,7 @@ __all__ = [
     "RunEvent",
     "RunState",
     "RunsAdapter",
+    "Series",
     "Stage",
     "Status",
     "StatusAdapter",

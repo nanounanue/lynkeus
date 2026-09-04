@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
-from textual.widgets import RichLog, TextArea
+from dataclasses import replace
+
+from textual.widgets import Input, RichLog, TextArea
 
 from lynkeus.demo import demo_app
-from lynkeus.screens import ActionsScreen, DataScreen, QueryScreen, RunsScreen
+from lynkeus.models import Series, Status
+from lynkeus.screens import (
+    ActionsScreen,
+    DataScreen,
+    QueryScreen,
+    RunsScreen,
+    StatusScreen,
+)
 from lynkeus.testing import settle
+from lynkeus.widgets import PromptScreen
 
 
 def test_status_screen(shell_snapshot) -> None:
@@ -91,3 +101,65 @@ async def test_action_runs_as_subprocess_and_reports_exit_code() -> None:
         await settle(pilot, ticks=5)
         state = actions.query_one("#actions-state")
         assert "exit 0" in str(state.render())
+
+
+async def test_an_action_that_needs_arguments_prompts_for_them() -> None:
+    app = demo_app()
+    async with app.run_test(size=(110, 34)) as pilot:
+        await settle(pilot)
+        await pilot.press("5", "down")
+        await settle(pilot)
+        actions = app.screen_for("actions")
+        assert isinstance(actions, ActionsScreen)
+        assert actions.selected is not None
+        assert actions.selected.args == "CONFIG"
+
+        await pilot.press("enter")
+        await settle(pilot)
+        prompt = app.screen
+        assert isinstance(prompt, PromptScreen)
+        assert actions.process is None  # nothing started before the answer
+
+        prompt.query_one("#prompt", Input).value = "example/dirtyduck.yaml"
+        await pilot.press("enter")
+        await settle(pilot, ticks=10)
+        assert actions.process is not None
+        assert actions.process.wait() == 0
+        await settle(pilot, ticks=5)
+        log = actions.query_one("#actions-log", RichLog)
+        assert "example/dirtyduck.yaml" in str(log.lines[0])
+
+
+async def test_cancelling_the_prompt_starts_nothing() -> None:
+    app = demo_app()
+    async with app.run_test(size=(110, 34)) as pilot:
+        await settle(pilot)
+        await pilot.press("5", "down", "enter")
+        await settle(pilot)
+        assert isinstance(app.screen, PromptScreen)
+
+        await pilot.press("escape")
+        await settle(pilot)
+        actions = app.screen_for("actions")
+        assert isinstance(actions, ActionsScreen)
+        assert actions.process is None
+
+
+async def test_a_quiet_sparkline_says_so_instead_of_drawing_a_flat_line() -> None:
+    app = demo_app()
+    status_screen = app.screen_for("status")
+    assert isinstance(status_screen, StatusScreen)
+    live = status_screen.adapter.status
+
+    def quiet() -> Status:
+        loud = live()
+        return replace(
+            loud, series=[Series("runs per day", [0.0] * 14, "none in 14 d")]
+        )
+
+    status_screen.adapter.status = quiet  # type: ignore[method-assign]
+    async with app.run_test(size=(110, 34)) as pilot:
+        await settle(pilot)
+        panel = str(status_screen.query_one("#status-runs").render())
+        assert "none in 14 d" in panel
+        assert "▁▁▁" not in panel

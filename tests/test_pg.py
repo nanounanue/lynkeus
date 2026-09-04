@@ -22,6 +22,19 @@ def test_from_env_accepts_pg_variables() -> None:
     assert source.dsn == ""
 
 
-def test_from_env_needs_host_and_database_together() -> None:
+def test_from_env_accepts_a_database_without_a_host() -> None:
+    """A unix-socket server is an ordinary local setup, not a missing one.
+
+    meio-sim's own connection rule says so and refuses to require ``PGHOST``;
+    a shell stricter than the project it watches would refuse to start against
+    a database the project connects to happily.
+    """
+    source = PgSource.from_env(env={"PGDATABASE": "x"})
+
+    assert source.dsn == ""
+
+
+def test_from_env_refuses_a_host_with_no_database() -> None:
+    """``PGHOST`` alone still leaves libpq to pick the database by OS user."""
     with pytest.raises(MissingCredentials):
-        PgSource.from_env(env={"PGDATABASE": "x"})
+        PgSource.from_env(env={"PGHOST": "h"})

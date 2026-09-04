@@ -96,6 +96,11 @@ class PgSource:
     def from_env(cls, env: Mapping[str, str] | None = None) -> PgSource:
         """Build a source from the environment, or raise ``MissingCredentials``.
 
+        ``PGDATABASE`` alone is enough: ``PGHOST`` is optional for a server
+        reached over a unix socket, and requiring it would refuse a perfectly
+        ordinary local setup. What is refused is *no* configuration at all,
+        where libpq would otherwise connect to a database nobody named.
+
         Args:
             env: Mapping to read instead of ``os.environ``; used in tests.
 
@@ -106,13 +111,13 @@ class PgSource:
         url = env.get("DATABASE_URL", "")
         if url:
             return cls(dsn=url)
-        if env.get("PGDATABASE") and env.get("PGHOST"):
+        if env.get("PGDATABASE"):
             return cls(dsn="")
         raise MissingCredentials(
-            "No PostgreSQL configuration: set PGDATABASE and PGHOST (plus "
-            "PGUSER/PGPASSWORD) or DATABASE_URL. In this workspace they come "
-            "from the project's .envrc; run `direnv allow` in the project "
-            "directory and retry."
+            "No PostgreSQL configuration: set PGDATABASE (plus PGHOST/PGPORT/"
+            "PGUSER/PGPASSWORD as your server needs) or DATABASE_URL. In this "
+            "workspace they come from the project's .envrc; run `direnv allow` "
+            "in the project directory and retry."
         )
 
     def connect(self, *, autocommit: bool = False) -> Connection[DictRow]:

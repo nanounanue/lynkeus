@@ -178,7 +178,11 @@ class ShellApp(App[None]):
     # --------------------------------------------------------------- compose
     def compose(self) -> ComposeResult:
         """Header, tabs, the switcher, footer."""
-        yield ShellHeader(self.project, self.subtitle)
+        # The source names its own engine; ``pg`` is the default, so the
+        # consumers on PgSource render exactly as they did.
+        yield ShellHeader(
+            self.project, self.subtitle, str(getattr(self.source, "label", "pg"))
+        )
         yield TabBar(self.tabs, divider_after=len(self.standard))
         with ContentSwitcher(initial=self.current_slug, id="shell-body"):
             for screen in self.standard:

@@ -37,9 +37,9 @@ signatures through 1.x. New fields, new keyword arguments and new attributes
 an adapter may carry are additive and arrive in 1.x releases. Renaming or
 removing any of them is a 2.0. The history is in `CHANGELOG.md`.
 
-The one known ceiling is Textual: the shell pins `textual<7`, and three
-screen snapshots differ on Textual 8. Lifting that cap is 1.x work, not a
-contract change.
+Textual 6.5 through 7.x are admitted, and the snapshots are taken on 7.5. The
+one known ceiling is Textual 8: three screen snapshots differ on it, and
+lifting that cap is 1.x work, not a contract change.
 
 ## Changing the shell from a consumer
 
@@ -69,8 +69,8 @@ Not published on PyPI. Pin a git tag:
 uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v1.0.0"
 ```
 
-Python 3.12 or newer. Runtime dependencies are Textual 6, Rich, psycopg 3 and
-loguru.
+Python 3.12 or newer. Runtime dependencies are Textual 6 or 7, Rich, psycopg 3
+and loguru.
 
 ## The shell
 

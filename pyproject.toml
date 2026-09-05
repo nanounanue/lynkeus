@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: System :: Monitoring",
 ]
 dependencies = [
-    "textual>=6.5,<7",
+    "textual>=6.5,<8",
     "rich>=14",
     "psycopg[binary]>=3.2",
     "loguru>=0.7",

@@ -182,9 +182,31 @@ def typer_actions(
     for group in cli_app.registered_groups:
         if group.typer_instance is None:
             continue
+        mount = _typer_group_name(group)
         for command in group.typer_instance.registered_commands:
-            actions.append(entry(f"{prefix} {group.name} {verb(command)}", command))
+            actions.append(entry(f"{prefix} {mount} {verb(command)}", command))
     return actions
+
+
+def _typer_group_name(group: Any) -> str:
+    """The name a sub-app is mounted under, whichever way it was given.
+
+    ``app.add_typer(sub, name="fleet")`` puts the name on the ``TyperInfo``;
+    ``app.add_typer(sub)`` with ``sub = typer.Typer(name="fleet")`` leaves a
+    ``DefaultPlaceholder`` there, and typer resolves it from the sub-app's own
+    ``info`` when it builds the click group. The first five consumers mounted
+    their sub-apps the first way; tcs mounts both of its own the second way,
+    and the palette printed the placeholder's ``repr`` as the verb.
+    """
+    from typer.models import DefaultPlaceholder
+
+    name = group.name
+    if isinstance(name, DefaultPlaceholder) or not name:
+        info = getattr(group.typer_instance, "info", None)
+        name = getattr(info, "name", None)
+        if isinstance(name, DefaultPlaceholder):
+            name = name.value
+    return str(name) if name else "?"
 
 
 def argparse_actions(

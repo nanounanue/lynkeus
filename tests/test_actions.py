@@ -158,6 +158,25 @@ def test_a_typer_command_keeps_the_name_it_was_registered_under() -> None:
     assert "demo db-init" in names, "not `demo db_init`"
 
 
+def test_a_sub_app_named_on_itself_is_mounted_under_that_name() -> None:
+    """``add_typer(sub)`` with ``Typer(name="fleet")``: the name is on the sub-app.
+
+    typer resolves it from there when it builds the click group; the palette
+    read only the ``TyperInfo`` and printed a ``DefaultPlaceholder`` repr in
+    the verb. tcs mounts both of its sub-apps this way.
+    """
+    app = typer.Typer(name="tcs")
+    fleet = typer.Typer(name="fleet")
+    app.add_typer(fleet)
+
+    @fleet.command("info")
+    def fleet_info(fleet_file: str) -> None:
+        """Display detailed fleet information."""
+
+    names = [a.name for a in typer_actions(app, "tcs")]
+    assert names == ["tcs fleet info"]
+
+
 # ------------------------------------------------------------------ argparse
 
 

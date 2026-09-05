@@ -42,16 +42,24 @@ def keys_markup(keys: Keys) -> str:
 
 
 class ShellHeader(Static):
-    """Project name and subtitle on the left; health dot and clock on the right."""
+    """Project name and subtitle on the left; health dot and clock on the right.
+
+    The dot names the engine the source is, not PostgreSQL: ``ShellApp`` reads
+    ``label`` off the ``DataSource`` and defaults to ``pg`` when it carries
+    none, so a project on SQLite reads ``sqlite ok`` and one on ``PgSource``
+    is unchanged.
+    """
 
     DEFAULT_CSS = """
     ShellHeader { height: 1; background: $panel; color: $foreground; padding: 0 1; }
     """
 
-    def __init__(self, project: str, subtitle: str = "") -> None:
+    def __init__(self, project: str, subtitle: str = "", label: str = "pg") -> None:
+        """``label`` names the engine in the health dot: ``pg ok``, ``sqlite ok``."""
         super().__init__("", id="shell-header")
         self.project = project
         self.subtitle = subtitle
+        self.label = label
         self.health = Health(connected=False, detail="")
         self.clock = "--:--"
 
@@ -67,9 +75,9 @@ class ShellHeader(Static):
 
     def render_now(self) -> None:
         """Compose the header line from its parts."""
-        dot = (
-            "[$success]●[/] pg ok" if self.health.connected else "[$error]●[/] pg down"
-        )
+        state = "ok" if self.health.connected else "down"
+        colour_name = "success" if self.health.connected else "error"
+        dot = f"[${colour_name}]●[/] {self.label} {state}"
         detail = f" [$text-muted]{self.health.detail}[/]" if self.health.detail else ""
         left = f"[b]{self.project}[/b]  [$text-muted]{self.subtitle}[/]"
         right = f"{dot}{detail}  [$text-muted]{self.clock}[/]"

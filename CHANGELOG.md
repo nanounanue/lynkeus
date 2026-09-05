@@ -10,7 +10,20 @@ the dominoes round, the seventh, whose own Textual app already locks Textual
 7.5, which `textual<7` refused to resolve beside; and by the azmu round, the
 eighth, whose own TUI — the human seat of a game — is written against Textual
 8, and one process cannot hold two Textuals. Raised also by the corredor
-round, one of the five consumers at the freeze, on its way from 0.3.0.
+round, one of the five consumers at the freeze, on its way from 0.3.0; and
+by the tanaland round, the ninth, the first consumer whose state was a
+SQLite file rather than a PostgreSQL server.
+
+### Added
+
+- A `DataSource` may carry `label` and `explain_label`, read by the header and
+  by the Query screen with the defaults `pg` and `explain analyze`. The header
+  said `pg ok` over a file, and `x explain analyze` described a key that runs
+  `explain query plan` — a different thing rather than the same thing spelt
+  differently, since nothing is executed to obtain it. `PgSource` and the five
+  consumers on it set neither and render exactly as before;
+  `tests/test_source_label.py` photographs a source that sets both and asserts
+  the Help screen's Query line says what the key bar says.
 
 ### Changed
 

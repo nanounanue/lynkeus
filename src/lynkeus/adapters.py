@@ -80,7 +80,20 @@ class ActionsAdapter(Protocol):
 
 
 class DataSource(Protocol):
-    """What the Data and Query screens read. ``PgSource`` is the real one."""
+    """What the Data and Query screens read. ``PgSource`` is the real one.
+
+    A source may also carry two optional attributes the shell reads with
+    defaults, so nothing that does not set them changes:
+
+    ``label``
+        The engine's name in the header's health dot — ``pg ok`` by default,
+        ``sqlite ok`` for a project whose state is a file.
+    ``explain_label``
+        What the Query screen's ``x`` key does, in the source's own words.
+        Defaults to ``explain analyze``; SQLite's is ``explain query plan``,
+        which is a different thing rather than the same thing spelt
+        differently — nothing is executed to obtain it.
+    """
 
     def health(self) -> Health:
         """Reachability plus a short server description."""
@@ -91,7 +104,7 @@ class DataSource(Protocol):
         ...
 
     def explain(self, statement: str) -> QueryResult:
-        """``explain analyze`` of a statement, rolled back."""
+        """The statement's query plan; ``explain_label`` says what that means."""
         ...
 
     def tables(self) -> list[TableInfo]:

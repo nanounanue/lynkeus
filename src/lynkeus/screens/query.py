@@ -31,6 +31,8 @@ class QueryScreen(ShellScreen):
     SLUG = "query"
     TITLE = "Query"
     PRIMARY = "#query-results"
+    #: Replaced per instance in ``__init__``: the ``x`` key's label is the
+    #: source's, since not every engine has ``explain analyze``.
     KEYS = (
         ("^enter", "run"),
         ("x", "explain analyze"),
@@ -71,6 +73,16 @@ class QueryScreen(ShellScreen):
     ) -> None:  # noqa: ANN001
         super().__init__(**kwargs)
         self.source = source
+        #: What ``x`` does, in the source's own words. PostgreSQL runs the
+        #: statement to get its plan and SQLite does not, so calling both
+        #: "explain analyze" would misdescribe the key on half of them.
+        self.explain_label = str(getattr(source, "explain_label", "explain analyze"))
+        self.KEYS = (
+            ("^enter", "run"),
+            ("x", self.explain_label),
+            ("y", "copy json"),
+            ("e", "export csv"),
+        )
         self.saved = dict(saved or {})
         self.state_dir = state_dir
         self.mine: dict[str, str] = self._load_mine()
@@ -166,7 +178,7 @@ class QueryScreen(ShellScreen):
         self.load(lambda: self.source.query(sql_text), self.show_result, group="query")
 
     def action_explain(self) -> None:
-        """Run ``explain analyze`` on the editor's text."""
+        """Run the source's explain on the editor's text."""
         sql_text = self.query_one("#query-editor", TextArea).text.strip()
         if not sql_text:
             return

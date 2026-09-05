@@ -140,7 +140,13 @@ The three protocols live in `lynkeus.adapters`:
 | `ActionsAdapter` | Actions palette, `<proj> actions list/run` | `just --dump` plus the project's CLI commands, run as subprocesses |
 
 The Data and Query screens need only a `DataSource`; `PgSource` is one, so
-they cost a project nothing beyond credentials.
+they cost a project nothing beyond credentials. A source may also carry two
+optional attributes the shell reads with defaults: `label`, the engine's name
+in the header's health dot (`pg ok` by default, `sqlite ok` for a project
+whose state is a file), and `explain_label`, what the Query screen's `x` key
+does in the source's own words (`explain analyze` by default; SQLite's
+`explain query plan` executes nothing, so it is a different thing rather than
+the same thing spelt differently).
 
 A `RunsAdapter` may also carry two optional attributes the Runs screen reads
 with defaults: `mode`, the wording after `progress ·` in the log panel's title
@@ -193,7 +199,7 @@ uv run python -m lynkeus.demo --live   # ticking clock, polling on
 
 - `lynkeus.app.ShellApp` — the shell.
 - `lynkeus.adapters` — `StatusAdapter`, `RunsAdapter`, `ActionsAdapter`,
-  `DataSource`.
+  `DataSource` (with the optional `label` and `explain_label`).
 - `lynkeus.models` — `Status`, `Health`, `Gauge`, `Series`, `PendingItem`,
   `Run`, `RunDetail`, `Stage`, `RunEvent`, `Action`, `QueryResult`,
   `TableInfo`, `TableDetail`, `ColumnInfo`, `IndexInfo`; each has `to_json()`,

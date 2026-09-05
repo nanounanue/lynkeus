@@ -49,6 +49,20 @@ def test_a_recipes_comment_becomes_its_description() -> None:
     assert actions["just replay"].description == "just replay", "no comment, no prose"
 
 
+def test_a_variable_is_not_a_recipe() -> None:
+    """``pg_port := "55432"`` prints like a recipe in ``just --dump`` and is not one.
+
+    Offering it would put an action in the palette that `just` itself refuses
+    ("Justfile does not contain recipe"). featurizer's justfile has three.
+    """
+    dump = 'pg_port   := "55432"\nexport PGURL := "x"\nalias t := test\n\n' + DUMP
+    names = {a.name for a in parse_just_dump(dump)}
+    assert "just pg_port" not in names
+    assert "just export" not in names
+    assert "just alias" not in names
+    assert "just db-up" in names
+
+
 def test_default_is_not_an_action() -> None:
     """`just default` only prints the recipe list the shell already renders."""
     assert "just default" not in {a.name for a in parse_just_dump(DUMP)}

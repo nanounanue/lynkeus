@@ -51,7 +51,11 @@ DESTRUCTIVE_WORDS = re.compile(
     re.IGNORECASE,
 )
 
-_RECIPE = re.compile(r"^(?P<name>[A-Za-z0-9_-]+)(?P<params>[^:#]*):(?P<deps>.*)$")
+#: A recipe line: ``name params: deps``. The lookahead rejects ``name := value``
+#: — a justfile *variable* prints the same way in ``just --dump`` and would
+#: otherwise be offered as a recipe that ``just`` refuses to run. featurizer's
+#: justfile opens with three of them (``pg_port``, ``container``, ``pg_url``).
+_RECIPE = re.compile(r"^(?P<name>[A-Za-z0-9_-]+)(?P<params>[^:#]*):(?!=)(?P<deps>.*)$")
 
 #: A predicate over ``(name, description)`` deciding whether the shell confirms
 #: before starting an action.

@@ -311,3 +311,41 @@ async def test_a_project_modal_dims_too() -> None:
         assert app.screen.styles.background.a < 1.0, (
             "a project's own modal is opaque, so only the shell's two dim"
         )
+
+
+def test_a_project_screen_opens_a_run_on_the_runs_screen() -> None:
+    """``RunsScreen.open`` lands on a run the list has not loaded yet.
+
+    Also raised by the tanaland round: its Participants screen is a class
+    roster, and ``enter`` on a row has to open that participant's run here.
+    Setting ``selected`` alone did not survive the load — populating the table
+    highlights its first row, and the cursor is the selection on this screen.
+    """
+    import asyncio
+
+    from textual.widgets import DataTable
+
+    from lynkeus.testing import settle
+
+    app = demo_app()
+    seen: dict[str, object] = {}
+
+    async def go() -> None:
+        async with app.run_test(size=(110, 34)) as pilot:
+            await settle(pilot)
+            runs = app.screen_for("runs")
+            assert isinstance(runs, RunsScreen)
+            # Ask for the run while the list is still loading, which is when a
+            # project screen's `enter` actually asks: switching to the tab
+            # starts the read, and the answer arrives a worker later.
+            app.action_tab_slug("runs")
+            runs.open("77be1a0d")
+            await settle(pilot)
+            table = runs.query_one("#runs-table", DataTable)
+            seen["selected"] = runs.selected
+            seen["cursor"] = table.coordinate_to_cell_key(
+                table.cursor_coordinate
+            ).row_key.value
+
+    asyncio.run(go())
+    assert seen == {"selected": "77be1a0d", "cursor": "77be1a0d"}

@@ -79,6 +79,11 @@ class RunsScreen(ShellScreen):
         self.runs: list[Run] = []
         self.filter_text = ""
         self.selected: str | None = None
+        #: A run a project screen asked for that the list has not loaded yet.
+        #: The cursor is the selection on this screen — populating the table
+        #: highlights its first row, which would otherwise overwrite anything
+        #: set before the load finished. See :meth:`open`.
+        self.wanted: str | None = None
         self.detail: RunDetail | None = None
         self.mode = "progress"
 
@@ -142,6 +147,11 @@ class RunsScreen(ShellScreen):
             )
             shown += 1
         self.query_one("#runs-count", Static).update(f"{shown} of {len(runs)}")
+        # One load's worth of memory: a run a project screen asked for that
+        # this list does not have is dropped rather than kept forever.
+        wanted, self.wanted = self.wanted, None
+        if wanted is not None and self._move_cursor(table, wanted):
+            return
         if self.selected is None and shown:
             self.select(self._first_key(table))
         elif self.selected is not None:
@@ -157,6 +167,35 @@ class RunsScreen(ShellScreen):
         return (
             needle in f"{run.run_id} {run.name} {run.state.value} {run.detail}".lower()
         )
+
+    def open(self, run_id: str) -> None:
+        """Select ``run_id``, now or as soon as the list has loaded it.
+
+        For a project screen that knows which run the user asked for — a class
+        roster, a queue, a table of experiments — and wants ``enter`` on one of
+        its rows to land on that run here.
+
+        The cursor *is* the selection on this screen: populating the table
+        highlights its first row, which would overwrite an id set beforehand.
+        So this moves the cursor and lets the highlight do the selecting, and
+        when the list has not arrived yet — which is the usual case, since
+        switching to the tab is what starts the read — it remembers the
+        request for :meth:`show_runs` to honour.
+        """
+        self.wanted = str(run_id)
+        tables = self.query("#runs-table")
+        if not tables:  # the screen has not composed yet
+            return
+        if self._move_cursor(tables.first(DataTable), self.wanted):
+            self.wanted = None
+
+    def _move_cursor(self, table: DataTable, run_id: str) -> bool:
+        """Put the cursor on ``run_id``'s row; False when the list has none."""
+        for index, key in enumerate(table.rows):
+            if str(key.value) == run_id:
+                table.move_cursor(row=index)
+                return True
+        return False
 
     def select(self, run_id: str | None) -> None:
         """Select a run: load its detail and start its event stream."""

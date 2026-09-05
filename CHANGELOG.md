@@ -55,6 +55,14 @@ SQLite file rather than a PostgreSQL server.
   still sets `id_width` to fit them. Raised by the corredor round moving from
   0.3.0 to 1.0.0; the demo's ids are exactly eight characters, which is why
   the shell's own snapshots never tripped on it.
+- `RunsScreen.open(run_id)`, for a project screen that knows which run the
+  user asked for and wants `enter` on one of its rows to land on it here.
+  Setting `selected` from outside did not survive: the cursor is the selection
+  on this screen, and populating the table highlights its first row. `open`
+  moves the cursor, and remembers the request for one load when the list has
+  not arrived yet — which is the usual case, since switching to the tab is
+  what starts the read. Raised by tanaland's Participants screen, a class
+  roster whose rows are participants' runs.
 
 ## [1.0.0] - 2026-09-05
 

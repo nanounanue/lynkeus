@@ -110,6 +110,15 @@ The three protocols live in `lynkeus.adapters`:
 The Data and Query screens need only a `DataSource`; `PgSource` is one, so
 they cost a project nothing beyond credentials.
 
+A `RunsAdapter` may also carry two optional attributes the Runs screen reads
+with defaults: `mode`, the wording after `progress ·` in the log panel's title
+(`"LISTEN run_progress"`, or `"nothing to stream"` for a project whose runs
+are tables rather than processes), and `id_width`, how many characters of a
+run id the list and header show — 8 by default, which suits a hash or a uuid;
+a project whose ids are names (`example_01.customers`) sets it wider. A run
+with no `started_at` shows no `started` label, and an `events()` that yields
+nothing leaves the log empty under that title.
+
 A project screen subclasses `lynkeus.screens.ShellScreen`, sets `SLUG`,
 `TITLE`, `KEYS`, composes its widgets and ends with `self.keys_bar()`.
 `refresh_data()` runs on `r`, on activation and on every poll; `load(fn,

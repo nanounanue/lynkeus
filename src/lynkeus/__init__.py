@@ -41,7 +41,7 @@ from lynkeus.models import (
 from lynkeus.pg import MissingCredentials, PgSource
 from lynkeus.theme import FLEXOKI_DARK, FLEXOKI_LIGHT
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 __all__ = [
     "SubprocessActions",

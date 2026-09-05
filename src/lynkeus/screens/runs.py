@@ -71,6 +71,11 @@ class RunsScreen(ShellScreen):
     def __init__(self, adapter, **kwargs) -> None:  # noqa: ANN001
         super().__init__(**kwargs)
         self.adapter = adapter
+        #: How many characters of a run id to show. Eight suits a hash or a
+        #: uuid, which is what the first consumers had; a project whose ids
+        #: are names (``example_01.customers``) sets ``id_width`` on its
+        #: adapter, next to ``mode``, and the list and header follow.
+        self.id_width: int = int(getattr(adapter, "id_width", 8))
         self.runs: list[Run] = []
         self.filter_text = ""
         self.selected: str | None = None
@@ -119,7 +124,11 @@ class RunsScreen(ShellScreen):
                 "queued" if run.state is RunState.QUEUED else age(run.started_at, now)
             )
             table.add_row(
-                glyph, run.run_id[:8], clip(run.name, 13), when, key=run.run_id
+                glyph,
+                clip(run.run_id, self.id_width),
+                clip(run.name, 13),
+                when,
+                key=run.run_id,
             )
             shown += 1
         self.query_one("#runs-count", Static).update(f"{shown} of {len(runs)}")
@@ -168,12 +177,19 @@ class RunsScreen(ShellScreen):
         state = f"[${STYLES[run.state]}]{GLYPHS[run.state]} {run.state.value}[/]"
         if run.state is RunState.RUNNING:
             state += f" {elapsed(run.started_at, now)}"
-        line1 = f"[b]run {run.run_id[:8]}[/b]  {run.name}  {state}"
+        line1 = f"[b]run {clip(run.run_id, self.id_width)}[/b]  {run.name}  {state}"
         meta = "  ".join(
             f"[$text-muted]{k}[/] {v}" for k, v in detail.meta.items() if k != "url"
         )
-        started = run.started_at.strftime("%H:%M") if run.started_at else ""
-        line2 = f"[$text-muted]started[/] {started}  {meta}".rstrip()
+        # A run nobody timestamped (featurizer's materializations are tables,
+        # not events) gets no "started" label: a label with nothing after it
+        # reads as a bug, not as a fact about the project.
+        parts = []
+        if run.started_at is not None:
+            parts.append(f"[$text-muted]started[/] {run.started_at:%H:%M}")
+        if meta:
+            parts.append(meta)
+        line2 = "  ".join(parts)
         self.query_one("#run-header", Static).update(f"{line1}\n{line2}")
         lines = []
         for stage in detail.stages:
@@ -274,9 +290,14 @@ class RunsScreen(ShellScreen):
                 except Exception as exc:  # noqa: BLE001 — shown, not hidden
                     self.report_error("cancel", exc)
                 else:
-                    self.app.notify(f"cancel requested for {run_id[:8]}", timeout=3)
+                    self.app.notify(
+                        f"cancel requested for {clip(run_id, self.id_width)}",
+                        timeout=3,
+                    )
 
-        self.app.push_screen(ConfirmScreen(f"Kill run {run_id[:8]}?"), done)
+        self.app.push_screen(
+            ConfirmScreen(f"Kill run {clip(run_id, self.id_width)}?"), done
+        )
 
     def action_open(self) -> None:
         """Open the run's URL, when the adapter gave one."""

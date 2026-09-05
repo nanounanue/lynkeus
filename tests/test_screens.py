@@ -8,7 +8,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Input, RichLog, Static, TextArea
 
 from lynkeus.demo import demo_app
-from lynkeus.models import Series, Status
+from lynkeus.models import Run, RunState, Series, Status
 from lynkeus.screens import (
     ActionsScreen,
     DataScreen,
@@ -51,6 +51,55 @@ def test_actions_prompt_over_the_palette(shell_snapshot) -> None:
     palette still readable underneath.
     """
     assert shell_snapshot(demo_app(), keys=["5", "down", "enter"])
+
+
+def test_runs_named_by_a_project_with_nothing_to_stream(shell_snapshot) -> None:
+    """A run that is a table, not a process: a name for an id, no start, no log.
+
+    featurizer's materializations look like this. The id must not be cut to
+    eight characters, the header must not print a bare ``started`` label, and
+    an event stream that ends at once must leave the panel titled by ``mode``.
+    """
+    from lynkeus.models import RunDetail, Stage
+
+    class TableRuns:
+        mode = "nothing to stream"
+        id_width = 20
+
+        def list(self, limit: int = 50) -> list:
+            return [
+                Run(
+                    "example_01.customers",
+                    "customers",
+                    RunState.SUCCEEDED,
+                    detail="104 features / 1 group",
+                ),
+                Run(
+                    "scratch.stores",
+                    "stores",
+                    RunState.FAILED,
+                    detail="5 features / 2 groups · 1 missing",
+                ),
+            ]
+
+        def show(self, run_id: str) -> RunDetail:
+            run = next(r for r in self.list() if r.run_id == run_id)
+            return RunDetail(
+                run,
+                [
+                    Stage("group_000", 104, 104),
+                    Stage("group_001", 0, 3, "table missing"),
+                ],
+                {"schema": "example_01", "stem": "customers", "keys": "as_of_date, id"},
+            )
+
+        def events(self, run_id: str):
+            return iter(())
+
+        def cancel(self, run_id: str) -> None:
+            raise RuntimeError("a table, not a process")
+
+    assert shell_snapshot(demo_app(runs_adapter=TableRuns()), keys=["2"])
 
 
 def test_help_screen(shell_snapshot) -> None:

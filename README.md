@@ -162,7 +162,9 @@ A project screen subclasses `lynkeus.screens.ShellScreen`, sets `SLUG`,
 `refresh_data()` runs on `r`, on activation and on every poll; `load(fn,
 on_done)` runs an adapter call in a thread and hands the result back on the
 UI thread. `sql_for_selection()` lets `4` open the Query screen on whatever
-the screen has selected.
+the screen has selected, and `RunsScreen.open(run_id)` is the same move for
+`2` — a screen whose rows are runs hands one over and the cursor lands on it,
+whether or not the list has loaded yet.
 
 ## Headless
 
@@ -205,6 +207,7 @@ uv run python -m lynkeus.demo --live   # ticking clock, polling on
   `TableInfo`, `TableDetail`, `ColumnInfo`, `IndexInfo`; each has `to_json()`,
   the screen-level ones `to_rich()`.
 - `lynkeus.screens` — `ShellScreen` and the six standard screens.
+  `RunsScreen.open(run_id)` opens one run from a project screen.
 - `lynkeus.commands` — the headless functions.
 - `lynkeus.pg.PgSource` — `from_env()`, `rows()`, `query()`, `explain()`,
   `tables()`, `table_detail()`, `listen(channel, timeout)`, `health()`.

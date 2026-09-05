@@ -41,6 +41,26 @@ The one known ceiling is Textual: the shell pins `textual<7`, and three
 screen snapshots differ on Textual 8. Lifting that cap is 1.x work, not a
 contract change.
 
+## Changing the shell from a consumer
+
+Nobody pushes to `main`. Branch protection requires a pull request and green
+CI from everyone, the shell's own session included.
+
+- **Additive**, which is a new field, keyword argument or adapter attribute,
+  or a fix: switch the consumer to `uv add --editable ../lynkeus`, branch as
+  `<consumer>/<need>`, make the change together with the test that fails
+  without it and a line in `CHANGELOG.md`, and open the pull request. Keep
+  working on the editable path meanwhile. The review is three checks: CI
+  green, nothing renamed or removed, no signature changed. Merge, tag `1.x`,
+  and the consumer swaps its pin back to the tag.
+- **Breaking**, which is a rename, a removal, a changed signature or the
+  Textual cap: open an issue first. It is a 2.0 conversation, not a pull
+  request.
+
+The pull request keeps what made the 0.3.1 and 0.3.2 rounds fast, a change
+arriving with its failing case, and adds the one thing they lacked, a gate
+before `main` moves.
+
 ## Install
 
 Not published on PyPI. Pin a git tag:
@@ -54,18 +74,18 @@ loguru.
 
 ## The shell
 
-```
-triage-pg  project chi311                            ● pg ok  pg 16   10:11
-1 Status  2 Runs  3 Data  4 Query  5 Actions │ 6 Experiments  7 Leaderboard  ? Help
-┌ runs ─────────────┐  run 0f3a9c21  chi311_v3  ● running 00:41:12
-│ ● 0f3a9c21 … 41m  │  ┌ artifacts ───────────────────────────────────────┐
-│ ✓ 9c21e7b4 … 2h   │  │ matrices  ━━━━━━━━━━━━━━━━━━━━━━━━━━━  12/20  ETA 6m │
-│ …                 │  └───────────────────────────────────────────────────┘
-│ / filter   7 of 37│  ┌ progress · LISTEN run_progress ──────────────────┐
-└───────────────────┘  │ 10:10:41  cache_hit   matrix  as_of=2018-10-01 … │
- l log  k kill  o open  y copy as json
- ? help  / filter  ^p palette  r refresh  t theme  q quit        poll 5s · v1.1.4
-```
+The five working screens, taken from `python -m lynkeus.demo` against the
+fake adapters the tests use, at 110 by 34 cells.
+
+![Status: health, facts, gauges, the last runs, a sparkline and pending work](docs/img/status.svg)
+
+![Runs: the list on the left, one run's stages and live log on the right](docs/img/runs.svg)
+
+![Data: the catalogue by schema, one table's columns, indexes and sample rows](docs/img/data.svg)
+
+![Query: the editor, its result and the saved queries](docs/img/query.svg)
+
+![Actions: the palette, prompting for an action's arguments before it starts](docs/img/actions.svg)
 
 Keys `1`–`5` open the standard screens, `6`+ the project's own, `?` help.
 `/` focuses the current filter, `^p` the command palette (tabs, refresh,
@@ -227,33 +247,4 @@ another server to use one; each test builds and drops its own uniquely named
 schema and touches nothing else. CI runs the fast tier on Python 3.12 and
 3.13 and the integration tier on PostgreSQL 14, 16 and 17.
 
-## Non-goals
-
-- Business logic. The shell reads adapters and runs the project's CLI; it
-  decides nothing about cohorts, scenarios or corpora.
-- Visualisation beyond sparklines and bars. Maps, surfaces and networks open
-  in the project's existing web console.
-- A CLI framework. The command functions are plain callables so that typer and
-  argparse projects wire them the same way.
-- Authentication. A served shell sits behind a reverse proxy.
-
-## Layout
-
-```
-src/lynkeus/
-  app.py        ShellApp: header, tabs, switcher, footer, keys, palette
-  adapters.py   the three protocols and DataSource
-  models.py     dataclasses with to_json and to_rich
-  screens/      status, runs, data, query, actions, help + the ShellScreen base
-  widgets.py    header, tab bar, key bars, footer, Panel, confirm/prompt dialogs
-  commands.py   the headless functions behind --json
-  pg.py         PgSource: credential guard, read-only queries, catalog, LISTEN
-  text.py       sparklines, bars, ages, glyphs
-  theme.py      Flexoki dark and light
-  testing.py    Pilot helpers and the snapshot fixture
-  demo.py       fake adapters; python -m lynkeus.demo
-tests/          one snapshot per screen, the commands, the text helpers
-docs/adr/       decisions, starting with why this is a package
-```
-
-Decisions live in `docs/adr/`.
+Decisions are recorded in `docs/adr/`, and every release in `CHANGELOG.md`.

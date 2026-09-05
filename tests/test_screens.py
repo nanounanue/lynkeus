@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from textual.screen import ModalScreen
-from textual.widgets import Input, RichLog, Static, TextArea
+from textual.widgets import DataTable, Input, RichLog, Static, TextArea
 
 from lynkeus.demo import demo_app
 from lynkeus.models import Run, RunState, Series, Status
@@ -112,6 +112,54 @@ def test_project_screen(shell_snapshot) -> None:
 
 def test_light_theme(shell_snapshot) -> None:
     assert shell_snapshot(demo_app(), keys=["t"])
+
+
+async def test_a_hash_id_shows_its_prefix_not_an_ellipsis() -> None:
+    """Eight characters of a uuid are a usable prefix; ``b7e2c4a…`` is not.
+
+    Four of the five consumers key runs by a hash or a uuid at the default
+    ``id_width``. Cutting the id through ``clip`` gave them seven characters
+    and an ellipsis in the list, the header and the kill prompt, which reads
+    as a truncated value rather than as the prefix every CLI prints. The demo's
+    ids are exactly eight characters, so the shell's own snapshots never
+    tripped on it.
+    """
+    from lynkeus.models import RunDetail
+
+    class HashRuns:
+        mode = "hash ids"
+
+        def list(self, limit: int = 50) -> list:
+            return [
+                Run(
+                    "b7e2c4a1-5d6f-4e8a-9b0c-1d2e3f4a5b6c",
+                    "corridor-audition",
+                    RunState.SUCCEEDED,
+                )
+            ]
+
+        def show(self, run_id: str) -> RunDetail:
+            return RunDetail(self.list()[0])
+
+        def events(self, run_id: str):
+            return iter(())
+
+        def cancel(self, run_id: str) -> None:
+            raise RuntimeError("not from here")
+
+    app = demo_app(runs_adapter=HashRuns())
+    async with app.run_test(size=(110, 34)) as pilot:
+        await settle(pilot)
+        await pilot.press("2")
+        await settle(pilot)
+        runs = app.screen_for("runs")
+        assert isinstance(runs, RunsScreen)
+        cell = str(runs.query_one("#runs-table", DataTable).get_row_at(0)[1])
+        assert cell == "b7e2c4a1"
+        header = runs.query_one("#run-header", Static).content
+        text = getattr(header, "plain", str(header))
+        assert "run b7e2c4a1" in text
+        assert "…" not in text
 
 
 async def test_runs_selection_streams_events() -> None:

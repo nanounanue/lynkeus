@@ -5,23 +5,26 @@ commit date. Breaking changes are marked; everything else is additive.
 
 ## [1.1.0] - unreleased
 
-Raised by the tcs round, the sixth consumer and the first after the freeze,
-and by the dominoes round, the seventh: a repository whose own Textual app
-already locks Textual 7.5, which `textual<7` refused to resolve beside. The
-cockpit there is a third entry point over an experiment store and touches
-neither of the project's two table frontends.
+Raised by the tcs round, the sixth consumer and the first after the freeze; by
+the dominoes round, the seventh, whose own Textual app already locks Textual
+7.5, which `textual<7` refused to resolve beside; and by the azmu round, the
+eighth, whose own TUI — the human seat of a game — is written against Textual
+8, and one process cannot hold two Textuals.
 
 ### Changed
 
-- The Textual range is `>=6.5,<8`. The shell renders the same on 7.5: three
+- The Textual range is `>=6.5,<9`, raised in two steps by two rounds: dominoes
+  to admit 7.5, azmu to admit 8.2.8. The shell renders the same on both: three
   snapshots (Query, Actions, the prompt over Actions) changed by one cell
-  each — the DataTable cursor row's trailing padding takes the row colour, and
-  a zero-width rectangle changes fill — and no text moved. The lock records
-  7.5.0 and the snapshots are taken against it; the five consumers on
-  Textual 6 keep their own locks and see no change. `tests/test_textual_pin.py`
-  asserts the declared range admits 7.5 and the installed release, so the
-  next tightening is a visible change here rather than a resolver error in a
-  consumer. Textual 8 stays capped for the reason the README gives.
+  each — the DataTable cursor row's trailing padding takes the row colour, a
+  zero-width rectangle changes fill, and a column width moves in the Actions
+  prompt — and no text moved. Nothing in the adapter contract, the models or
+  the screens changed. The lock file and CI run on 8.2.8, and every snapshot
+  on `main` is a render of that version rather than a merge of two.
+  `tests/test_textual_pin.py` and `tests/test_dependencies.py` between them
+  assert the declared range admits 6.5, 7.5.0 and 8.2.8 and that the installed
+  release is inside it, so the next tightening is a visible change here rather
+  than a resolver error in a consumer.
 
 ### Fixed
 

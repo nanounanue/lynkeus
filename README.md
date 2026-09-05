@@ -37,9 +37,12 @@ signatures through 1.x. New fields, new keyword arguments and new attributes
 an adapter may carry are additive and arrive in 1.x releases. Renaming or
 removing any of them is a 2.0. The history is in `CHANGELOG.md`.
 
-Textual 6.5 through 7.x are admitted, and the snapshots are taken on 7.5. The
-one known ceiling is Textual 8: three screen snapshots differ on it, and
-lifting that cap is 1.x work, not a contract change.
+The Textual ceiling moved twice in 1.1.0 and ended at `textual>=6.5,<9`: the
+dominoes round raised it to admit 7.5, the azmu round to admit 8.2.8, so the
+shell now accepts Textual 6 through 8. The three screen snapshots that differed
+were re-taken under each version in turn; what differed was one cell's
+background on the Query and Actions screens and a column width in the Actions
+prompt, and nothing in the contract. The lock file and CI run on 8.2.8.
 
 ## Changing the shell from a consumer
 
@@ -66,10 +69,10 @@ before `main` moves.
 Not published on PyPI. Pin a git tag:
 
 ```bash
-uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v1.0.0"
+uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v1.1.0"
 ```
 
-Python 3.12 or newer. Runtime dependencies are Textual 6 or 7, Rich, psycopg 3
+Python 3.12 or newer. Runtime dependencies are Textual 6 to 8, Rich, psycopg 3
 and loguru.
 
 ## The shell

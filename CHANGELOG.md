@@ -3,6 +3,18 @@
 Consumers pin git tags, so every entry names the tag. Dates are the tag's
 commit date. Breaking changes are marked; everything else is additive.
 
+## [Unreleased]
+
+Raised by the tcs round, the sixth consumer and the first after the freeze.
+
+### Fixed
+
+- `typer_actions` named a sub-app mounted with `app.add_typer(sub)` — where
+  the name lives on `typer.Typer(name=...)` rather than on the `add_typer`
+  call — by the `repr` of a `DefaultPlaceholder`. The mount name is now
+  resolved the way typer resolves it, from the sub-app's own `info` when the
+  `TyperInfo` carries none. A regression test covers it.
+
 ## [1.0.0] - 2026-09-05
 
 The API freezes. No code changed since 0.3.2: this tag records that five

@@ -22,22 +22,31 @@ with it.
 
 ## Status
 
-Pre-alpha. The shell, its six screens, the headless command functions and the
-Pilot test helpers exist and are exercised by the first consumer,
-[triage-pg](https://github.com/ccd-ia/triage-pg). The API stays at 0.x until a
-third project consumes it; 1.0 freezes it.
+1.0, and the API is frozen. Five projects consume the shell: triage-pg,
+acervo, meio-sim, corredor and featurizer. Between them they cover a typer
+CLI and an argparse one, runs that are processes and runs that are tables, a
+review queue that writes through the CLI, Dagster materializations started
+from the palette, and a library with a Python 3.10 floor that carries the
+shell as an extra behind a version marker. The last two rounds changed nothing
+in the contract, which is what the freeze rests on.
 
-**0.2.0 breaks one model.** `Status.series` is a `list[Series]`, not a
-`dict[str, list[float]]`: a series now carries the wording for the case where
-there is nothing to draw, because a line of zeros and a flat constant line are
-the same picture. `Action` gained `args`, which is additive.
+Frozen means: the three adapter protocols, `DataSource`, the models in
+`lynkeus.models`, `ShellApp`'s keyword arguments, `ShellScreen`'s hooks, the
+`lynkeus.commands` functions and `lynkeus.actions` keep their names and
+signatures through 1.x. New fields, new keyword arguments and new attributes
+an adapter may carry are additive and arrive in 1.x releases. Renaming or
+removing any of them is a 2.0. The history is in `CHANGELOG.md`.
+
+The one known ceiling is Textual: the shell pins `textual<7`, and three
+screen snapshots differ on Textual 8. Lifting that cap is 1.x work, not a
+contract change.
 
 ## Install
 
 Not published on PyPI. Pin a git tag:
 
 ```bash
-uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v0.2.1"
+uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v1.0.0"
 ```
 
 Python 3.12 or newer. Runtime dependencies are Textual 6, Rich, psycopg 3 and

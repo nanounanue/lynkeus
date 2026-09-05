@@ -82,6 +82,16 @@ class RunsScreen(ShellScreen):
         self.detail: RunDetail | None = None
         self.mode = "progress"
 
+    def _prefix(self, run_id: str) -> str:
+        """The first ``id_width`` characters of a run id: a prefix, never clipped.
+
+        A prefix is what the project's own ``runs show`` accepts, so eight
+        characters of a hash must read as usable; ``clip`` would drop one and
+        add an ellipsis, which says the opposite. A project whose ids are
+        names sets ``id_width`` to fit them and gets the whole name.
+        """
+        return run_id[: self.id_width]
+
     def compose(self) -> ComposeResult:
         """List and filter on the left; header, stages, log on the right."""
         with Horizontal():
@@ -125,7 +135,7 @@ class RunsScreen(ShellScreen):
             )
             table.add_row(
                 glyph,
-                clip(run.run_id, self.id_width),
+                self._prefix(run.run_id),
                 clip(run.name, 13),
                 when,
                 key=run.run_id,
@@ -177,7 +187,7 @@ class RunsScreen(ShellScreen):
         state = f"[${STYLES[run.state]}]{GLYPHS[run.state]} {run.state.value}[/]"
         if run.state is RunState.RUNNING:
             state += f" {elapsed(run.started_at, now)}"
-        line1 = f"[b]run {clip(run.run_id, self.id_width)}[/b]  {run.name}  {state}"
+        line1 = f"[b]run {self._prefix(run.run_id)}[/b]  {run.name}  {state}"
         meta = "  ".join(
             f"[$text-muted]{k}[/] {v}" for k, v in detail.meta.items() if k != "url"
         )
@@ -291,13 +301,11 @@ class RunsScreen(ShellScreen):
                     self.report_error("cancel", exc)
                 else:
                     self.app.notify(
-                        f"cancel requested for {clip(run_id, self.id_width)}",
+                        f"cancel requested for {self._prefix(run_id)}",
                         timeout=3,
                     )
 
-        self.app.push_screen(
-            ConfirmScreen(f"Kill run {clip(run_id, self.id_width)}?"), done
-        )
+        self.app.push_screen(ConfirmScreen(f"Kill run {self._prefix(run_id)}?"), done)
 
     def action_open(self) -> None:
         """Open the run's URL, when the adapter gave one."""

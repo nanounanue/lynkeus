@@ -9,7 +9,8 @@ Raised by the tcs round, the sixth consumer and the first after the freeze; by
 the dominoes round, the seventh, whose own Textual app already locks Textual
 7.5, which `textual<7` refused to resolve beside; and by the azmu round, the
 eighth, whose own TUI — the human seat of a game — is written against Textual
-8, and one process cannot hold two Textuals.
+8, and one process cannot hold two Textuals. Raised also by the corredor
+round, one of the five consumers at the freeze, on its way from 0.3.0.
 
 ### Changed
 
@@ -33,6 +34,14 @@ eighth, whose own TUI — the human seat of a game — is written against Textua
   call — by the `repr` of a `DefaultPlaceholder`. The mount name is now
   resolved the way typer resolves it, from the sub-app's own `info` when the
   `TyperInfo` carries none. A regression test covers it.
+- The Runs screen cut a run id to `id_width` through `clip`, so at the default
+  width every hash- or uuid-keyed consumer showed seven characters and an
+  ellipsis (`b7e2c4a…`) in the list, the header and the kill prompt, where
+  0.3.0 showed the eight-character prefix the project's own `runs show`
+  accepts. An id is now a prefix, never clipped; a project whose ids are names
+  still sets `id_width` to fit them. Raised by the corredor round moving from
+  0.3.0 to 1.0.0; the demo's ids are exactly eight characters, which is why
+  the shell's own snapshots never tripped on it.
 
 ## [1.0.0] - 2026-09-05
 

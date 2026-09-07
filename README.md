@@ -47,22 +47,35 @@ prompt, and nothing in the contract. The lock file and CI run on 8.2.8.
 ## Changing the shell from a consumer
 
 Nobody pushes to `main`. Branch protection requires a pull request and green
-CI from everyone, the shell's own session included.
+CI from everyone, the shell's own session included. Six rules, learned from
+the round that produced 1.1.0, where two consumers raised the same Textual
+cap twice without either seeing the other's work:
 
-- **Additive**, which is a new field, keyword argument or adapter attribute,
-  or a fix: switch the consumer to `uv add --editable ../lynkeus`, branch as
-  `<consumer>/<need>`, make the change together with the test that fails
-  without it and a line in `CHANGELOG.md`, and open the pull request. Keep
-  working on the editable path meanwhile. The review is three checks: CI
-  green, nothing renamed or removed, no signature changed. Merge, tag `1.x`,
-  and the consumer swaps its pin back to the tag.
-- **Breaking**, which is a rename, a removal, a changed signature or the
-  Textual cap: open an issue first. It is a 2.0 conversation, not a pull
-  request.
+1. **Open an issue first, and read before you open it.** Check the open
+   issues and pull requests. If one already covers your need, join it rather
+   than opening a second — the 1.1.0 round cost two duplicate rounds, two
+   sets of re-taken snapshots and two competing caps because neither session
+   looked.
+2. **A need that touches every consumer is issue-only.** The Textual cap, the
+   Python floor, the lock file, a model's default: these are fixed and
+   released from the shell's own side, because one consumer's ceiling is
+   every consumer's floor.
+3. **A local additive fix may still be a pull request.** A new field, keyword
+   argument or adapter attribute, or a fix that touches only your own path:
+   branch as `<consumer>/<need>`, reference the issue, and carry the test
+   that fails without the change.
+4. **Pull requests do not edit `CHANGELOG.md`.** The release commit writes
+   the section from the merged pull requests. Five branches off one commit
+   all insert at the same line otherwise, and every one of them conflicts.
+5. **Work in a worktree off `origin/main`**, never in the shared checkout.
+   Another session may be reading it.
+6. **Pin tags only** — never a branch, a commit or a path — in a committed
+   `pyproject.toml`. A rebase merge rewrites SHAs, so a pin to a pull
+   request's commit dies the moment it lands. A tag cannot move under a lock.
 
-The pull request keeps what made the 0.3.1 and 0.3.2 rounds fast, a change
-arriving with its failing case, and adds the one thing they lacked, a gate
-before `main` moves.
+The review is three checks: CI green, nothing renamed or removed, no
+signature changed. A rename, a removal or a changed signature is a 2.0
+conversation.
 
 ## Install
 

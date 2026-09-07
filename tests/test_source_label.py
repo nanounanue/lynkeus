@@ -58,3 +58,35 @@ def test_query_screen_over_a_sqlite_source(shell_snapshot) -> None:
     the Query screen is where the explain key is shown.
     """
     assert shell_snapshot(sqlite_app(), keys=["4"])
+
+
+async def test_the_help_screen_names_the_source_s_explain() -> None:
+    """The Help screen's Query line says what the key bar says.
+
+    ``x`` is bound with the source's ``explain_label``, but the help text
+    spelled ``explain analyze`` into the module, so a SQLite cockpit's help
+    contradicted its own key bar. A text assertion rather than a snapshot:
+    the contradiction is in the words, not in the picture. The mirror over
+    ``demo_app()`` is the half that keeps the five PostgreSQL consumers
+    reading exactly what they read before.
+    """
+    from textual.widgets import Static
+
+    from lynkeus.testing import settle
+
+    async def help_text(app) -> str:  # noqa: ANN001
+        async with app.run_test(size=(110, 34)) as pilot:
+            await settle(pilot)
+            await pilot.press("?")
+            await settle(pilot)
+            return " ".join(
+                getattr(w.content, "plain", str(w.content))
+                for w in app.screen_for("help").query(Static)
+            )
+
+    sqlite = await help_text(sqlite_app())
+    assert "explain query plan" in sqlite
+    assert "explain analyze" not in sqlite
+
+    postgres = await help_text(demo_app())
+    assert "explain analyze" in postgres

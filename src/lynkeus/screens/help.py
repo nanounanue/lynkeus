@@ -20,7 +20,7 @@ _TEXT = """\
 [b]Status[/b]    database facts, last runs, pending work — every line is a query, never a stored flag
 [b]Runs[/b]      [$primary]l[/] focus log   [$primary]k[/] kill   [$primary]o[/] open in browser   [$primary]y[/] copy as json   [$primary]esc[/] back to the list
 [b]Data[/b]      [$primary]enter[/] more sample rows   [$primary]y[/] copy columns   [$primary]4[/] open the table in Query
-[b]Query[/b]     [$primary]^enter[/] / [$primary]^r[/] run   [$primary]x[/] explain analyze   [$primary]y[/] copy json   [$primary]e[/] export csv   [$primary]s[/] save   [$primary]d[/] delete   [$primary]esc[/] leave the editor
+[b]Query[/b]     [$primary]^enter[/] / [$primary]^r[/] run   [$primary]x[/] {explain}   [$primary]y[/] copy json   [$primary]e[/] export csv   [$primary]s[/] save   [$primary]d[/] delete   [$primary]esc[/] leave the editor
 [b]Actions[/b]   [$primary]enter[/] run   [$primary]k[/] kill   [$primary]y[/] copy command — a subprocess of the project's CLI, never a parallel code path
 
 [$text-muted]Every read is a query inside a read-only transaction. Mutations only happen through Actions,
@@ -41,8 +41,17 @@ class HelpScreen(ShellScreen):
         self.extra = extra
 
     def compose(self) -> ComposeResult:
-        """The help text in one panel."""
-        text = _TEXT + (f"\n[b]project[/b]\n{self.extra}\n" if self.extra else "")
+        """The help text in one panel, with the source's own word for ``x``."""
+        # The key bar reads ``explain_label`` off the source; the help has to
+        # say the same thing, or a SQLite cockpit contradicts its own key bar.
+        explain = str(
+            getattr(
+                getattr(self.app, "source", None), "explain_label", "explain analyze"
+            )
+        )
+        text = _TEXT.format(explain=explain) + (
+            f"\n[b]project[/b]\n{self.extra}\n" if self.extra else ""
+        )
         with Panel("help", classes="-fill"), VerticalScroll():
             yield Static(text)
         yield self.keys_bar()

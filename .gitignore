@@ -32,6 +32,9 @@ snapshot_report.html
 # works on does not disturb whatever main is in the middle of.
 .worktrees/
 
+# Implementation plans: local to the machine that wrote them.
+specs/
+
 # Claude Code's hooks write here (tool-use traces, notifications). Session
 # artifacts of the machine, not of the package.
 logs/

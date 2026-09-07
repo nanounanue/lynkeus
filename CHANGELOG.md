@@ -3,7 +3,7 @@
 Consumers pin git tags, so every entry names the tag. Dates are the tag's
 commit date. Breaking changes are marked; everything else is additive.
 
-## [1.1.0] - unreleased
+## [1.1.0] - 2026-09-07
 
 Raised by the tcs round, the sixth consumer and the first after the freeze; by
 the dominoes round, the seventh, whose own Textual app already locks Textual

@@ -36,7 +36,25 @@ def test_data_screen(shell_snapshot) -> None:
 
 
 def test_query_screen(shell_snapshot) -> None:
-    assert shell_snapshot(demo_app(), keys=["4", "ctrl+r"])
+    """The picture is taken only once the rows are in.
+
+    ``settle`` waits for the workers that exist when it is called. A worker
+    that is not registered yet, or one that chains a second message, can leave
+    the table empty for the screenshot. In compare mode that fails as a
+    mismatch; under ``--snapshot-update`` it used to be written down as the new
+    truth, which happened once (2026-09-04). Asserting on the rows makes an
+    empty capture a failure in both modes.
+    """
+
+    async def rows_arrived(pilot) -> None:
+        table = pilot.app.screen.query_one("#query-results", DataTable)
+        assert table.row_count > 0, (
+            "the Query screen's results table is still empty after ctrl+r and "
+            "settle(); refusing to snapshot it. Re-run the test; if it repeats, "
+            "the run worker is finishing after settle() returns."
+        )
+
+    assert shell_snapshot(demo_app(), keys=["4", "ctrl+r"], before=rows_arrived)
 
 
 def test_actions_screen(shell_snapshot) -> None:

@@ -82,7 +82,7 @@ conversation.
 Not published on PyPI. Pin a git tag:
 
 ```bash
-uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v1.1.0"
+uv add "lynkeus @ git+https://github.com/nanounanue/lynkeus.git@v1.1.1"
 ```
 
 Python 3.12 or newer. Runtime dependencies are Textual 6 to 8, Rich, psycopg 3

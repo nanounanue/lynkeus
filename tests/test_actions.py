@@ -177,6 +177,64 @@ def test_a_sub_app_named_on_itself_is_mounted_under_that_name() -> None:
     assert names == ["tcs fleet info"]
 
 
+def _app_with_hidden_verbs() -> typer.Typer:
+    """One visible verb, and a hidden one of each kind ``--help`` leaves out.
+
+    A command hides itself with ``command(hidden=True)``; a group hides every
+    verb under it, whether ``add_typer``, the sub-app's callback or the sub-app
+    itself says so. triage-pg's ``postmodel kinds --json`` is the first kind.
+    """
+    app = typer.Typer(name="demo")
+
+    @app.command()
+    def shown() -> None:
+        """A verb the help lists."""
+
+    @app.command(hidden=True)
+    def internal() -> None:
+        """Read by a front end, not typed by a person."""
+
+    by_mount = typer.Typer()
+    app.add_typer(by_mount, name="mounted", hidden=True)
+
+    @by_mount.command("run")
+    def mounted_run() -> None: ...
+
+    by_callback = typer.Typer()
+    app.add_typer(by_callback, name="called")
+
+    @by_callback.callback(hidden=True)
+    def called_callback() -> None: ...
+
+    @by_callback.command("run")
+    def called_run() -> None: ...
+
+    by_itself = typer.Typer(name="itself", hidden=True)
+    app.add_typer(by_itself)
+
+    @by_itself.command("run")
+    def itself_run() -> None: ...
+
+    return app
+
+
+def test_a_hidden_typer_verb_is_left_out_as_help_leaves_it_out() -> None:
+    names = [a.name for a in typer_actions(_app_with_hidden_verbs(), "demo")]
+    assert names == ["demo shown"]
+
+
+def test_include_hidden_lists_the_hidden_verbs_too() -> None:
+    app = _app_with_hidden_verbs()
+    names = [a.name for a in typer_actions(app, "demo", include_hidden=True)]
+    assert names == [
+        "demo shown",
+        "demo internal",
+        "demo mounted run",
+        "demo called run",
+        "demo itself run",
+    ]
+
+
 # ------------------------------------------------------------------ argparse
 
 

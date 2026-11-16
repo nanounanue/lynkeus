@@ -3,6 +3,23 @@
 Consumers pin git tags, so every entry names the tag. Dates are the tag's
 commit date. Breaking changes are marked; everything else is additive.
 
+## [1.1.1] - 2026-11-16
+
+Raised by triage-pg, whose palette and `actions list` showed
+`postmodel kinds --json`, a verb hidden from `--help` because only its Emacs
+front end reads it. triage-pg filtered it out on its own side
+(ccd-ia/triage-pg#72) while it waited for this fix.
+
+### Fixed
+
+- `typer_actions` listed verbs that `--help` hides (#11). It now leaves out a
+  command marked `hidden=True` and every command under a hidden group, whether
+  `add_typer`, the sub-app's callback or `typer.Typer(...)` hides it. It
+  resolves the group's flag with typer's own `solve_typer_info_defaults`, so
+  the palette lists what `--help` lists. A consumer that wants the hidden verbs
+  passes the new keyword `include_hidden=True`. triage-pg can drop
+  `hidden_verbs()` when it moves its pin to this tag.
+
 ## [1.1.0] - 2026-09-07
 
 Raised by the tcs round, the sixth consumer and the first after the freeze; by

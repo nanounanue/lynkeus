@@ -147,14 +147,25 @@ def just_actions(
 
 
 def typer_actions(
-    cli_app: Any, prefix: str, destructive: Destructive | None = None
+    cli_app: Any,
+    prefix: str,
+    destructive: Destructive | None = None,
+    *,
+    include_hidden: bool = False,
 ) -> list[Action]:
     """Every verb of a ``typer.Typer`` app, introspected rather than imported.
 
     ``typer`` is not a dependency of this package — the argparse consumers must
     not inherit it — so the app arrives as ``Any`` and the one import happens
     here, where a project that calls this has typer by definition.
+
+    A verb ``--help`` leaves out is left out here too: a command marked
+    ``hidden=True``, and every command under a group that is hidden, whether
+    ``add_typer``, the sub-app's callback or the sub-app itself says so.
+    triage-pg's ``postmodel kinds --json`` exists only for its Emacs front end,
+    and its palette listed it. ``include_hidden=True`` lists them all.
     """
+    from typer.main import solve_typer_info_defaults
     from typer.models import ArgumentInfo
 
     is_destructive = destructive or destructive_by_words
@@ -175,16 +186,21 @@ def typer_actions(
             return str(command.name)
         return command.callback.__name__.replace("_", "-") if command.callback else "?"
 
+    def shown(info: Any) -> bool:
+        return include_hidden or not info.hidden
+
     actions = [
         entry(f"{prefix} {verb(command)}", command)
         for command in cli_app.registered_commands
+        if shown(command)
     ]
     for group in cli_app.registered_groups:
-        if group.typer_instance is None:
+        if group.typer_instance is None or not shown(solve_typer_info_defaults(group)):
             continue
         mount = _typer_group_name(group)
         for command in group.typer_instance.registered_commands:
-            actions.append(entry(f"{prefix} {mount} {verb(command)}", command))
+            if shown(command):
+                actions.append(entry(f"{prefix} {mount} {verb(command)}", command))
     return actions
 
 
